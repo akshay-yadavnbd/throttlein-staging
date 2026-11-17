@@ -1,0 +1,30 @@
+.button {
+  min-height: 36px !important;
+  height: auto !important;
+  min-width: 0;
+  padding: 8px 12px !important;
+  gap: 7px;
+  border-radius: 7px !important;
+  font-size: 12px !important;
+  line-height: 18px !important;
+  font-weight: 500;
+  box-shadow: none !important;
+}
+.icon {
+  width: 36px !important;
+  height: 36px !important;
+  padding: 8px !important;
+  flex-shrink: 0;
+}
+.primary {
+  background: #191d21 !important;
+  color: #fff !important;
+  border-color: #191d21 !important;
+}
+.primary:hover:not(:disabled) {
+  background: #30383f !important;
+}
+.button:focus-visible {
+  outline: 2px solid #59656f;
+  outline-offset: 3px;
+}

@@ -1,0 +1,35 @@
+/* Refund-specific pieces on top of components/WorkspaceList.module.css
+   (list) and components/AdminModal.module.css (the process dialog). */
+
+.summary { color:#39434c; }
+.summary strong { font-weight:600; color:#252c32; }
+.aged { color:#8a5a12; font-weight:600; }
+.warnText { color:#a3413b; }
+.method { display:inline-flex; padding:2px 8px; border-radius:999px; background:#f0f2f4; color:#46525c; font-size:11px; font-weight:500; white-space:nowrap; }
+
+/* Process dialog */
+.banner { display:flex; gap:10px; padding:12px 14px; border:1px solid #e3e7eb; border-radius:10px; background:#fafbfc; font-size:12px; line-height:1.6; color:#39434c; }
+.banner svg { width:15px; height:15px; flex:none; margin-top:2px; }
+.banner strong { font-weight:600; }
+.good { border-color:#d5e6bf; background:#f7fbf1; color:#38521a; }
+.info { border-color:#ecd3a3; background:#fffaf0; color:#6b4a12; }
+.bad { border-color:#f0c9c6; background:#fdf7f6; color:#7d302b; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+.box { min-width:0; padding:14px 16px; border:1px solid #e9edf0; border-radius:10px; }
+.boxTitle { margin-bottom:8px; font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#74808a; }
+.box p, .box li { font-size:12px; line-height:1.6; color:#39434c; }
+.box strong { font-weight:600; color:#252c32; }
+.muted { color:#87919a; }
+.box .warnText { color:#a3413b; }
+.items li + li { margin-top:4px; }
+.value { display:flex; align-items:center; gap:4px; min-width:0; }
+.value span { font-variant-numeric:tabular-nums; letter-spacing:.02em; overflow-wrap:anywhere; }
+.copy { display:grid; place-items:center; width:24px; height:24px; flex:none; border-radius:6px; color:#87919a; cursor:pointer; }
+.copy:hover { background:#edf0f2; color:#252c32; }
+.copy svg { width:13px; height:13px; }
+.banner .copy { display:inline-grid; vertical-align:middle; margin-left:2px; }
+.form { display:grid; gap:12px; }
+.footerSpread { justify-content:space-between; flex-wrap:wrap; }
+.orderLink { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; color:#39434c; }
+.orderLink:hover { text-decoration:underline; text-underline-offset:3px; }
+.orderLink svg { width:13px; height:13px; }

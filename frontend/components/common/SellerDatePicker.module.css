@@ -1,0 +1,140 @@
+.root {
+  width: 100%;
+  min-width: 0;
+}
+.root .inputWrapper {
+  min-height: 44px;
+  height: 44px;
+  padding: 0 10px 0 12px;
+  border: 1px solid #e3e7eb;
+  border-radius: 8px;
+  background: white;
+  box-shadow: none;
+}
+.root .inputWrapper[data-hover="true"] {
+  background: #fafbfc;
+  border-color: #bbc5cd;
+}
+.segment {
+  font-size: 12px;
+  color: #39434c;
+}
+.segment[data-placeholder="true"] {
+  color: #87919a;
+}
+.segment[data-focused="true"] {
+  background: #edf2e6;
+  color: #252c32;
+  border-radius: 3px;
+}
+.selector {
+  color: #74808a;
+  background: transparent;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 6px;
+}
+.popover {
+  padding: 0;
+  border: 1px solid #e0e5e9;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 8px 28px #202a3324;
+  max-width: calc(100vw - 24px);
+  overflow: hidden;
+}
+.calendar {
+  background: white;
+  color: #303942;
+  box-shadow: none;
+  border-radius: 12px;
+  max-width: 100%;
+}
+.calendarHeader {
+  background: white;
+  padding: 12px 8px;
+}
+.timeWrapper {
+  border: 1px solid #e3e7eb;
+  border-radius: 8px;
+  background: white;
+  box-shadow: none;
+}
+.day {
+  font-size: 12px;
+  border-radius: 7px;
+}
+.day[data-selected="true"] {
+  background: #191d21 !important;
+  color: white !important;
+}
+.day[data-hover="true"]:not([data-selected="true"]) {
+  background: #edf2e6;
+}
+.navigation {
+  background: #f5f7f8;
+  color: #46525c;
+  border-radius: 7px;
+}
+.monthYearButton {
+  border: 1px solid #e0e5e9 !important;
+  border-radius: 7px !important;
+  background: #fff !important;
+  color: #303942 !important;
+  font-size: 13px !important;
+  font-weight: 500;
+}
+.monthYearButton:hover {
+  background: #f5f7f8 !important;
+}
+.calendar .pickerItem {
+  font-size: 13px !important;
+  font-weight: 400;
+  color: #64737f;
+  border-radius: 6px;
+}
+.calendar .pickerItem[tabindex="0"] {
+  color: #252c32;
+  font-weight: 600;
+}
+.calendar .pickerItem:focus-visible {
+  outline: 2px solid #59656f;
+  outline-offset: -3px;
+}
+.calendar .pickerHighlight {
+  background: #f0f4e9 !important;
+  border: 1px solid #dce5cc;
+  border-radius: 7px !important;
+}
+.calendar .pickerList {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd2d9 transparent;
+  overscroll-behavior: contain;
+}
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid #edf0f2;
+  padding: 12px 16px;
+}
+.footer button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: #46525c;
+  font-size: 12px;
+  cursor: pointer;
+}
+.footer button:last-child {
+  background: #191d21;
+  color: white;
+}
+.footer button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.footer button:focus-visible {
+  outline: 2px solid #59656f;
+  outline-offset: 2px;
+}

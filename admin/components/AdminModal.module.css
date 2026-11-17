@@ -1,0 +1,30 @@
+/* Shared admin confirm/edit modal look (workspace panels). Pass `modal` and
+   `backdrop` to HeroUI's Modal `classNames`, the rest to its parts. */
+.modal { border:1px solid #e3e7eb; border-radius:12px; background:white; color:#252c32; box-shadow:0 16px 48px rgb(25 29 33 / 16%); }
+.backdrop { background:rgb(25 29 33 / 38%); }
+.header { display:flex; align-items:flex-start; gap:14px; padding:22px 24px 14px; }
+.icon { display:grid; place-items:center; width:40px; height:40px; flex:none; border-radius:10px; }
+.icon svg { width:18px; height:18px; }
+.eyebrow { font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#74808a; }
+.title { margin-top:3px; font-size:16px; font-weight:600; line-height:1.35; }
+.sub { margin-top:4px; font-size:12px; line-height:1.6; color:#74808a; font-weight:400; }
+.close { display:grid; place-items:center; width:30px; height:30px; flex:none; border-radius:7px; color:#74808a; cursor:pointer; }
+.close:hover { background:#f0f2f4; color:#252c32; }
+.close:disabled { opacity:.4; cursor:not-allowed; }
+.close svg { width:15px; height:15px; }
+.body { padding:4px 24px 18px; gap:14px; }
+.footer { padding:14px 24px; border-top:1px solid #edf0f2; background:#f8fafb; gap:10px; border-radius:0 0 12px 12px; }
+
+/* "What happens next" list. */
+.effects { padding:14px 16px; border-radius:10px; border:1px solid #e9edf0; background:#f8fafb; }
+.effects > p:first-child, .label { font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#74808a; margin-bottom:8px; }
+.effects li, .effects > p + p { display:flex; gap:8px; font-size:12px; line-height:1.55; color:#39434c; }
+.effects li + li { margin-top:6px; }
+.effects li svg { width:13px; height:13px; flex:none; margin-top:3px; }
+/* One-line caveat under the effects ("a suspended seller stays suspended"). */
+.callout { padding:12px 14px; border-radius:10px; border:1px solid #ecd3a3; background:#fffaf0; font-size:12px; line-height:1.6; color:#6b4a12; }
+
+.positive { background:#eef6e2; color:#4f7a1e; }
+.warn { background:#fdf4e3; color:#8a5a12; }
+.danger { background:#fdeeed; color:#a3413b; }
+.info { background:#eef2f5; color:#46525c; }

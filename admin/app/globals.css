@@ -1,0 +1,391 @@
+/* Layer order must be declared BEFORE the imports so `layer(theme)` below
+   lands where HeroUI v3 expects it. */
+@layer theme, base, components, utilities;
+
+@import "tailwindcss";
+
+/* ── HeroUI v3 (coexisting with v2 during the migration) ─────────────
+   Order is load-bearing: `tailwindcss` first, then v3 styles. v2 keeps
+   theming through its Tailwind plugin (see @config below) and v3 through
+   CSS variables, so both work side by side while pages are migrated one
+   at a time. Both will be loaded until the last v2 import is gone —
+   that bundle-size cost is the documented price of the incremental path.
+
+   Package name is aliased (`@heroui-v3/*` → `@heroui/*@3`) in
+   package.json, because v2 still occupies `@heroui/react`. */
+@import "@heroui-v3/styles";
+
+/* THROTTLEIN nude theme — v3 CSS variables. Applied via
+   `data-theme="nude"` on <html> in app/layout.tsx.
+   Must stay byte-identical to frontend/app/themes/nude.css;
+   `npm run check:theme` enforces that. */
+@import "./themes/nude.css" layer(theme);
+
+/* Load the JS theme config (custom brand colors + heroui plugin) */
+/* `.mts`, not `.ts` — see the note in frontend/app/globals.css. Short
+   version: Node can't infer a `.ts` file's module type without a "type"
+   field in package.json, so it warns on every build; `.mts` is
+   unambiguously ESM. Adding "type": "module" instead would break
+   next.config.js and postcss.config.js, which are CommonJS. */
+@config "../tailwind.config.mts";
+
+/* Tell Tailwind to scan HeroUI's compiled component classes */
+@source "../node_modules/@heroui/theme/dist";
+
+/* Enable class-based dark mode (Tailwind v4 syntax) */
+@custom-variant dark (&:is(.dark, .dark *));
+
+:root {
+  --brand-lime:  #BDFF00;
+  --brand-black: #141414;
+  --brand-cream: #EFF1EA;
+  --brand-white: #FFFFFF;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: var(--font-inter), "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--brand-cream);
+  color: var(--brand-black);
+}
+
+.dark body {
+  background: var(--brand-black);
+  color: var(--brand-cream);
+}
+
+/* ─── REMOVED: the global font-weight clamp ──────────────────────────────
+ * This block used to force `.font-bold`, `.font-extrabold` and
+ * `.font-black` — plus any inline weight >= 700 — to `font-weight: 600
+ * !important`.
+ *
+ * Why it had to go: it made the entire heading hierarchy a fiction.
+ * `font-semibold`, `font-bold` and `font-extrabold` all rendered at 600,
+ * so the ~30 h1/h2 elements across these pages that carefully varied
+ * their weight class were visually identical. Any attempt to build a real
+ * typographic scale on top of it would silently do nothing.
+ *
+ * The design intent — "never go heavier than semibold" — is preserved by
+ * using the right class at the call site, not by overriding it globally.
+ * The type scale lives in the theme; weights are 600 / 500 / 400.
+ *
+ * NOTE: removing this makes every remaining `font-bold`/`font-extrabold`
+ * in un-migrated pages jump from 600 to 700/800. That is the intended,
+ * one-time visual diff agreed for Phase 0 — those classes get corrected
+ * to `font-semibold` as each tab is migrated.
+ */
+
+/* Brand wordmark — capped at 600 like everything else. */
+.wordmark {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* ─── Restore cursor-pointer on interactive elements ────────────────────────
+   Tailwind v4 dropped the implicit `cursor: pointer` that v3 set on buttons,
+   so native <button> elements use the default text cursor. Restore the
+   familiar pointer for every actionable element (and ARIA buttons), and
+   keep disabled ones on `not-allowed` so the affordance still reads as
+   inactive. Applies project-wide without per-component tweaks. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+a[role="button"]:not([aria-disabled="true"]),
+summary {
+  cursor: pointer;
+}
+button:disabled,
+[role="button"][aria-disabled="true"],
+a[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* ─── Thin scrollbar (sidebar nav, notification dropdown) ─────────────
+ * Scoped inner scroll areas render the default browser scrollbar as a
+ * full-width grey gutter with arrow buttons — visually a second border
+ * cutting the panel in half. This class gives them a thin, track-less
+ * scrollbar instead: the thumb is a soft dark pill that's always subtly
+ * visible (so scrollability is still discoverable, WCAG 1.4.11-adjacent)
+ * and darkens on hover.
+ * `scrollbar-gutter: stable` reserves the lane so content doesn't shift
+ * when the list grows past the container.
+ */
+.thin-scroll {
+  scrollbar-width: thin;                              /* Firefox */
+  scrollbar-color: rgba(20, 20, 20, 0.18) transparent;
+  scrollbar-gutter: stable;
+}
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;                                         /* Chrome/Edge */
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgba(20, 20, 20, 0.18);
+  border-radius: 9999px;
+}
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(20, 20, 20, 0.32);
+}
+.thin-scroll::-webkit-scrollbar-button {
+  display: none;                                      /* no arrow caps */
+}
+
+/* ─── Hidden scrollbar ─────────────────────────────────────────────────
+ * Scrolls without rendering a scrollbar at all (wheel, trackpad, touch
+ * and keyboard still work). Used by DataTable's fillHeight mode per
+ * product decision: the pagination footer already tells you where you
+ * are in the list, so the bar was pure chrome. Prefer .thin-scroll
+ * anywhere there is no other signal that more content exists.
+ */
+.scrollbar-hidden {
+  scrollbar-width: none;                              /* Firefox */
+  -ms-overflow-style: none;                           /* legacy Edge */
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;                                      /* Chrome/Edge */
+}
+
+/* ─── Tables on brand cream ────────────────────────────────────────────
+ * Per product decision the table chrome (primary-variant container and
+ * its header band) sits on the brand cream — the same #EFF1EA the
+ * sidebar and shell header use — instead of HeroUI's default
+ * `--surface-secondary` beige, so the panel reads as ONE family of
+ * surfaces. Unlayered on purpose: HeroUI's component layer would win
+ * over an override placed in the theme layer.
+ * (`--surface-tertiary` IS the brand cream token in themes/nude.css.)
+ */
+[data-theme='nude'] .table-root--primary,
+[data-theme='nude'] .table-root--primary .table__header {
+  background-color: var(--surface-tertiary);
+}
+
+/* Light-thumb variant of .thin-scroll for DARK surfaces (the espresso
+ * sidebar): the default thumb is translucent black and vanishes there. */
+.thin-scroll-light {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  scrollbar-gutter: stable;
+}
+.thin-scroll-light::-webkit-scrollbar { width: 6px; }
+.thin-scroll-light::-webkit-scrollbar-track { background: transparent; }
+.thin-scroll-light::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 9999px;
+}
+.thin-scroll-light::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
+.thin-scroll-light::-webkit-scrollbar-button { display: none; }
+
+/* ─── Pagination: dark active page ─────────────────────────────────────
+ * HeroUI's active page link uses `--default` (a pale beige) — invisible
+ * against the cream table footer. Repoint its CSS-variable hooks at the
+ * accent (deep espresso, white numeral, 14.2:1) so the current page
+ * reads like the other primary actions. Unlayered for the same
+ * cascade-layer reason as the table override above.
+ */
+[data-theme='nude'] .pagination__link[data-active='true'] {
+  --pagination-link-bg: var(--accent);
+  --pagination-link-bg-hover: var(--accent);
+  --pagination-link-bg-pressed: var(--accent);
+  --pagination-link-fg: var(--accent-foreground);
+}
+
+/* ─── FilterTabs variants ──────────────────────────────────────────────
+ * HeroUI's Tabs `variant` prop emits no styling hook on this build, so
+ * the two tab looks are pinned here (see components/ui/FilterTabs.tsx):
+ *  - .ft-underline — section tabs: quiet row with a 2px ink underline.
+ *  - .ft-pills     — nested filter tabs: segmented pill track (cream
+ *    rail, white active pill), the HeroUI-docs segmented look.
+ * Unlayered so these beat the component layer.
+ */
+[data-theme='nude'] .ft-underline .tabs__list-container {
+  /* HeroUI paints its beige rail on the CONTAINER — kill it for the
+     underline look (it peeked out past the last tab as a phantom pill). */
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+[data-theme='nude'] .ft-underline .tabs__list {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  gap: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+[data-theme='nude'] .ft-underline .tabs__tab {
+  padding: 0.4rem 0.125rem;
+}
+[data-theme='nude'] .ft-underline .tabs__indicator {
+  position: absolute;
+  inset: auto 0 -1px 0;
+  top: auto;
+  height: 2px;
+  width: 100%;
+  border-radius: 9999px;
+  background: var(--foreground);
+  box-shadow: none;
+}
+
+[data-theme='nude'] .ft-pills .tabs__list-container {
+  /* The container IS the rail for pills. */
+  width: fit-content;
+  background: var(--surface-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 0.25rem;
+}
+[data-theme='nude'] .ft-pills .tabs__list {
+  background: transparent;
+  padding: 0;
+  gap: 0.25rem;
+}
+[data-theme='nude'] .ft-pills .tabs__indicator {
+  background: var(--surface);
+  border-radius: 9999px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.10);
+}
+
+/* ── HeroUI checkbox: make the UNCHECKED box visible ──────────────────
+ *
+ * HeroUI draws a checkbox's empty square as a `::before` on the wrapper
+ * span, coloured with `border-default`. Against this theme's cream
+ * surfaces that landed at lab(93.7) on a lab(94.8) panel — 1.2 lightness
+ * points, about 1.03:1. The box simply wasn't there until it was ticked,
+ * so an unchecked row read as a plain text label and you couldn't tell a
+ * togglable module from a heading. WCAG wants 3:1 for a control boundary.
+ *
+ * Scoped to `label > span[aria-hidden]` so it only touches checkbox and
+ * radio indicators — deliberately NOT a remap of HeroUI's `default`
+ * colour, which also drives hover tints and bordered-input edges across
+ * every screen in the panel.
+ *
+ * Applies wherever HeroUI checkboxes appear: the Staff module grid and
+ * the "Remember me" box on both login screens.
+ */
+[data-theme='nude'] label > input[type='checkbox'] + span[aria-hidden='true']::before,
+[data-theme='nude'] label > input[type='radio'] + span[aria-hidden='true']::before {
+  border-color: var(--control-border, oklch(78% 0.012 74.42));
+}
+/* Checked state paints its own fill over the top, so the stronger border
+   only ever shows while empty — no change to the ticked appearance. */
+[data-theme='nude'] label > input[type='checkbox']:hover + span[aria-hidden='true']::before,
+[data-theme='nude'] label > input[type='radio']:hover + span[aria-hidden='true']::before {
+  border-color: var(--foreground);
+}
+
+/* ═══ Workspace look shared with the seller dashboard ═══════════════════ */
+
+/* One tab treatment for section tabs and list filters — the seller workspace
+   look (frontend/app/globals.css). Scoped to the workspace main area. */
+#admin-main :is(.ft-underline, .ft-pills) .tabs__list-container {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+#admin-main :is(.ft-underline, .ft-pills) .tabs__list {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  gap: 22px;
+}
+#admin-main .admin-tab-row { column-gap: 22px; }
+#admin-main :is(.ft-underline, .ft-pills) .tabs__tab,
+#admin-main .admin-tab-row > :is(button, a) {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 7px;
+  width: auto;
+  height: auto;
+  min-height: 44px;
+  padding: 10px 0 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #7c8790;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+  white-space: nowrap;
+  opacity: 1;
+}
+#admin-main :is(.ft-underline, .ft-pills) .tabs__tab:hover,
+#admin-main .admin-tab-row > :is(button, a):hover { color: #303942; }
+#admin-main :is(.ft-underline, .ft-pills) .tabs__tab[aria-selected='true'],
+#admin-main .admin-tab-row > [aria-pressed='true'],
+#admin-main .admin-tab-row > [aria-current='page'] {
+  color: #303942;
+  border-bottom-color: #252c32;
+  font-weight: 600;
+}
+#admin-main :is(.ft-underline, .ft-pills) .tabs__indicator { display: none; }
+#admin-main :is(.ft-underline, .ft-pills) .tabs__tab[aria-disabled='true'] {
+  opacity: .45;
+  cursor: not-allowed;
+}
+#admin-main :is(.ft-underline, .ft-pills) .tabs__tab > span:not(.tabs__indicator),
+#admin-main .admin-tab-row > :is(button, a) > span {
+  margin: 0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #f0f2f4;
+  color: #7d8892;
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+#admin-main :is(.ft-underline, .ft-pills) .tabs__tab[aria-selected='true'] > span:not(.tabs__indicator),
+#admin-main .admin-tab-row > :is([aria-pressed='true'], [aria-current='page']) > span {
+  background: #eaf1df;
+  color: #5c7731;
+}
+#admin-main :is(.ft-underline, .ft-pills) .tabs__tab:focus-visible,
+#admin-main .admin-tab-row > :is(button, a):focus-visible {
+  outline: 2px solid #59656f;
+  outline-offset: -2px;
+}
+
+/* Reserve the viewport scrollbar lane so short and long pages keep the same width. */
+html { scrollbar-gutter: stable; }
+
+/* Workspace fields use one border for focus, without a second offset ring.
+   HeroUI fields draw that border on their wrapper; plain fields draw it themselves. */
+#admin-main input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):focus,
+#admin-main textarea:focus,
+#admin-main select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: #59656f !important;
+}
+#admin-main [data-slot='input-wrapper']:focus-within,
+#admin-main [data-slot='trigger'][aria-haspopup='listbox']:focus {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  border-color: #59656f !important;
+}
+#admin-main [data-slot='input-wrapper'] input,
+#admin-main [data-slot='input-wrapper'] textarea {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+#admin-main [data-slot='input-wrapper']:focus-within {
+  border-width: 1px;
+  border-style: solid;
+}
+
+/* HeroUI v2 emits !outline-solid in the utilities layer. Important declarations
+   reverse layer precedence, so an unlayered reset cannot override that utility.
+   Keep the inner control undecorated; its wrapper supplies visible focus. */
+@layer base {
+  #admin-main [data-slot='input-wrapper'] [data-slot='input'] {
+    outline: none !important;
+    outline-width: 0 !important;
+  }
+}

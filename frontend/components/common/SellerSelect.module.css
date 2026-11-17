@@ -1,0 +1,99 @@
+.root {
+  width: 180px;
+  min-width: 0;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.fullWidth {
+  width: 100%;
+}
+.control {
+  width: 100%;
+  min-width: 0;
+}
+.root.fullWidth .trigger {
+  min-height: 44px;
+  height: 44px;
+}
+.root .trigger {
+  min-height: 38px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #e0e5e9;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: none;
+  color: #38434c;
+  transition: border-color 0.15s;
+}
+.root .trigger[data-hover="true"] {
+  background: #fafbfc;
+  border-color: #bbc5cd;
+}
+.root .trigger[data-open="true"] {
+  border-color: #89959e;
+}
+.root .trigger[data-focus-visible="true"] {
+  outline: 2px solid #303942;
+  outline-offset: 2px;
+}
+.root .value {
+  color: #38434c;
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+.icon {
+  width: 15px;
+  height: 15px;
+  color: #7a8690;
+}
+.popover {
+  width: 100%;
+  min-width: 0;
+  padding: 5px;
+  border: 1px solid #e0e5e9;
+  border-radius: 10px;
+  background: #fff;
+  color: #303942;
+  box-shadow:
+    0 8px 24px #202a331a,
+    0 2px 6px #202a330a;
+}
+.listbox {
+  padding: 0;
+  gap: 2px;
+}
+.listboxWrapper {
+  max-height: 260px;
+}
+.option {
+  min-height: 34px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: #46525c;
+}
+.option[data-hover="true"],
+.option[data-focus="true"] {
+  background: #f3f5f7;
+  color: #252c32;
+}
+.option[aria-selected="true"] {
+  background: #edf2e6;
+  color: #303b23;
+}
+.option[aria-selected="true"][data-hover="true"],
+.option[aria-selected="true"][data-focus="true"] {
+  background: #e4ecd9;
+}
+.optionText {
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.check {
+  color: #536d2d;
+  width: 15px;
+  height: 15px;
+}

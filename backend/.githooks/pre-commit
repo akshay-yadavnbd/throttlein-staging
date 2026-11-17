@@ -1,0 +1,9 @@
+#!/bin/sh
+# Opt in once per clone:  git config core.hooksPath backend/.githooks
+# Lints, format-checks and type-checks the backend and runs the fast unit project before every commit.
+set -e
+cd "$(git rev-parse --show-toplevel)/backend"
+npm run -s lint
+npm run -s format:check
+npm run -s typecheck
+npx vitest run --project unit

@@ -1,0 +1,117 @@
+name: Security and regression checks
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    # deploy.yml passes which apps changed so an untouched app is not
+    # reinstalled, audited, tested or built. Every flag defaults to true,
+    # so pull requests and manual runs still verify everything.
+    # Strings, not booleans: a boolean `false` and an unset input both
+    # compare equal to '' in GitHub expressions, so they could not be
+    # told apart. Only the literal 'false' skips an app.
+    inputs:
+      backend:
+        type: string
+        default: 'true'
+      frontend:
+        type: string
+        default: 'true'
+      admin:
+        type: string
+        default: 'true'
+      chatbot:
+        type: string
+        default: 'true'
+
+permissions:
+  contents: read
+
+env:
+  # `inputs.*` is unset on pull_request/workflow_dispatch; that means "run".
+  CHECK_BACKEND: ${{ inputs.backend != 'false' }}
+  CHECK_FRONTEND: ${{ inputs.frontend != 'false' }}
+  CHECK_ADMIN: ${{ inputs.admin != 'false' }}
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  backend:
+    if: inputs.backend != 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+      # test/security.test.js transpiles frontend/lib/*.ts with the
+      # storefront's own typescript + isomorphic-dompurify, so the
+      # storefront's locked dependencies are required here too.
+      - name: Install locked dependencies
+        run: |
+          npm ci --prefix backend --ignore-scripts
+          npm ci --prefix frontend --ignore-scripts
+      - name: Dependency advisories
+        run: npm audit --prefix backend --audit-level=moderate --omit=dev
+      - name: Unit and security regressions
+        run: npm test --prefix backend
+      - name: Isolated database concurrency regressions
+        run: npm run test:integration --prefix backend
+
+  # The assistant's tests run offline against a fake API and a fake Groq.
+  chatbot:
+    if: inputs.chatbot != 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: chatbot/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --prefix chatbot --ignore-scripts
+      - name: Dependency advisories
+        run: npm audit --prefix chatbot --audit-level=moderate --omit=dev
+      - name: Assistant tests
+        run: npm test --prefix chatbot
+
+  web:
+    if: inputs.frontend != 'false' || inputs.admin != 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [frontend, admin]
+    steps:
+      - name: Decide whether ${{ matrix.app }} changed
+        id: gate
+        run: |
+          if [[ "${{ matrix.app }}" == "frontend" ]]; then run="$CHECK_FRONTEND"; else run="$CHECK_ADMIN"; fi
+          echo "run=$run" >>"$GITHUB_OUTPUT"
+          echo "${{ matrix.app }} checks: $run"
+      - uses: actions/checkout@v5
+        if: steps.gate.outputs.run == 'true'
+      - uses: actions/setup-node@v5
+        if: steps.gate.outputs.run == 'true'
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ${{ matrix.app }}/package-lock.json
+      - name: Install locked dependencies
+        if: steps.gate.outputs.run == 'true'
+        run: npm ci --prefix ${{ matrix.app }} --ignore-scripts
+      - name: Dependency advisories
+        if: steps.gate.outputs.run == 'true'
+        run: npm audit --prefix ${{ matrix.app }} --audit-level=moderate --omit=dev
+      - name: Theme files stay in sync
+        if: steps.gate.outputs.run == 'true'
+        run: npm run check:theme --prefix ${{ matrix.app }}
+      - name: Production build and type check
+        if: steps.gate.outputs.run == 'true'
+        run: npm run build --prefix ${{ matrix.app }} -- --webpack

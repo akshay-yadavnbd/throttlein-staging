@@ -1,0 +1,233 @@
+.shell {
+  background: #f6f7f9;
+  color: #20252b;
+}
+.sidebar {
+  width: 236px;
+  background: #191d21;
+  color: #eef0f2;
+  border: 0;
+}
+.brand {
+  padding: 28px 24px 24px;
+}
+.brand > p {
+  margin-top: 10px;
+  color: #9ca5ac;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.navigation {
+  padding: 4px 14px;
+  gap: 3px;
+}
+.groupLabel {
+  padding: 14px 10px 5px;
+  color: #879199;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.navLink {
+  min-height: 36px;
+  padding: 8px 10px;
+  gap: 10px;
+  line-height: 20px;
+  border: 0;
+  border-radius: 7px;
+  color: #b5bec5;
+  font-size: 12px;
+}
+.navLink > svg {
+  width: 17px;
+  height: 17px;
+}
+.navLink:hover {
+  background: #272d32;
+  color: white;
+}
+.navLink[aria-current="page"] {
+  background: #bdff00;
+  color: #191d21;
+  box-shadow: none;
+}
+.footer {
+  margin: 16px 14px;
+  padding: 18px 12px 4px;
+}
+.topbar {
+  min-height: 72px;
+  background: white;
+  border-bottom: 1px solid #e6e9ed;
+  padding-inline: 32px;
+}
+.pageTitle {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.3;
+  color: #303942;
+  font-weight: 600;
+}
+.account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.accountName {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #303942;
+  font-size: 12px;
+  font-weight: 600;
+}
+.account svg {
+  color: #77818b;
+}
+.main {
+  width: 100%;
+  padding: 32px;
+}
+.skip {
+  position: fixed;
+  left: 250px;
+  top: 8px;
+  z-index: 70;
+  transform: translateY(-150%);
+  padding: 10px 16px;
+  background: #bdff00;
+  color: #191d21;
+  border-radius: 6px;
+}
+.skip:focus {
+  transform: translateY(0);
+}
+.closeMenu {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px 0;
+}
+.closeMenu button {
+  padding: 8px;
+  color: white;
+}
+@media (max-width: 767px) {
+  .main {
+    padding: 20px 16px;
+  }
+  .sidebar {
+    width: 280px;
+  }
+  .skip {
+    left: 16px;
+  }
+}
+
+.mobileHeader {
+  background: #191d21;
+}
+
+/* Keep every in-page label and sticky action below the persistent header. */
+.main {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+.topbar,
+.mobileHeader {
+  z-index: 30;
+}
+.account {
+  padding: 9px 12px;
+  border: 1px solid #dce2e7;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 2px #202a3308;
+  cursor: pointer;
+}
+.account:hover,
+.account[aria-expanded="true"] {
+  background: #f6f7f9;
+  border-color: #e6e9ed;
+}
+.account > svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  transition: transform 0.15s;
+}
+.account[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+.accountPopover {
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  padding: 8px;
+  border: 1px solid #cfd7df;
+  border-radius: 12px;
+  background: white;
+  color: #303942;
+  box-shadow: 0 10px 30px #202a331a;
+}
+.accountMenu {
+  padding: 0;
+}
+.accountMenu ul {
+  gap: 6px;
+}
+.accountItem {
+  min-height: 40px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #e1e6eb;
+  background: #fff;
+  color: #46525c;
+}
+.accountItemTitle {
+  font-size: 12px;
+  font-weight: 500;
+}
+.accountItem[data-hover="true"],
+.accountItem[data-focus="true"] {
+  background: #f1f4f6;
+  color: #252c32;
+}
+.accountIdentity {
+  padding: 14px 12px;
+  margin-bottom: 6px;
+  border: 0;
+  border-bottom: 1px solid #e3e7eb;
+  border-radius: 0;
+  cursor: default;
+  opacity: 1;
+}
+.accountIdentity[data-hover="true"],
+.accountIdentity[data-focus="true"] {
+  background: white;
+}
+.accountRole {
+  display: block;
+  margin-top: 5px;
+  font-size: 10px;
+  color: #7b858e;
+  font-weight: 400;
+}
+.signOut {
+  color: #b44848;
+  border-color: #f0d7d7;
+  background: #fff8f8;
+}
+.signOut[data-hover="true"],
+.signOut[data-focus="true"] {
+  color: #a63737;
+  background: #fff0f0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .account > svg {
+    transition: none;
+  }
+}

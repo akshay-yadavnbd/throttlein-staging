@@ -1,0 +1,27 @@
+*.log
+node_modules
+uploads/*
+!uploads/.gitkeep
+/admin/.next
+/backend/uploads/*
+# Seed assets referenced by seeded DB records (category-type icons on the
+# seller-category pages). They must ship with the code — being ignored is
+# why production 404'd them while dev worked.
+!/backend/uploads/.gitkeep
+!/backend/uploads/helmet-type-*.png
+/frontend/.next
+# Backend build output (npm run build; the image compiles its own).
+/backend/dist
+/backend/.env
+/backend/new-products-images
+/backend/new-products-images
+
+# Environment files hold real credentials — never track them.
+.env
+.env.local
+/frontend/.env
+/admin/.env
+
+/backend/private-uploads/
+.env.*
+!.env.example

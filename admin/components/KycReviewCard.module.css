@@ -1,0 +1,100 @@
+/* KYC review card — workspace panel look. Used on the seller detail KYC tab
+   and inside each KYC queue entry; sized by its own width (container query). */
+.card { container:kyc / inline-size; background:white; border:1px solid #e3e7eb; border-radius:12px; color:#252c32; }
+.card a:focus-visible,.card button:focus-visible { outline:2px solid #617d26; outline-offset:3px; }
+.head { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:12px 16px; padding:20px 24px 16px; }
+.eyebrow { font-size:10px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#74808a; }
+.title { margin-top:3px; font-size:15px; font-weight:600; line-height:22px; }
+.sub { margin-top:4px; max-width:620px; font-size:12px; line-height:1.6; color:#66727c; }
+.headActions { display:flex; align-items:center; gap:8px; flex:none; }
+.body { padding:0 24px 20px; }
+.empty { padding:28px 20px; border:1px dashed #d6dde3; border-radius:10px; text-align:center; font-size:12px; color:#74808a; }
+
+/* Tax / bank / pickup — three spec sheets side by side, stacking when narrow. */
+.wells { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; }
+.well { min-width:0; border:1px solid #e9edf0; border-radius:10px; overflow:hidden; }
+.wellHead { display:flex; align-items:center; gap:9px; padding:10px 14px; border-bottom:1px solid #edf0f2; background:#fafbfc; font-size:12px; font-weight:600; }
+.wellIcon { display:grid; place-items:center; width:26px; height:26px; flex:none; border-radius:7px; border:1px solid #e9edf0; background:white; color:#55616b; }
+.wellIcon svg { width:14px; height:14px; }
+.rows { padding:0 14px; }
+.row { display:flex; align-items:center; justify-content:space-between; gap:14px; min-height:40px; padding:8px 0; }
+.row + .row { border-top:1px solid #f0f2f4; }
+.rowTop { align-items:flex-start; }
+.row dt { flex:none; font-size:11px; color:#87919a; }
+.row dd { display:flex; align-items:center; justify-content:flex-end; gap:4px; min-width:0; text-align:right; font-size:12px; font-weight:500; line-height:1.55; overflow-wrap:anywhere; }
+.muted { color:#87919a; font-weight:400; }
+/* Identifiers keep the UI font (a mono face read as a glitch) with even digits. */
+.mono { font-variant-numeric:tabular-nums; letter-spacing:.03em; }
+.copy { display:grid; place-items:center; width:24px; height:24px; flex:none; border-radius:6px; color:#87919a; cursor:pointer; }
+.copy:hover { background:#edf0f2; color:#252c32; }
+.copy svg { width:13px; height:13px; }
+.copied { color:#4f7a1e; }
+.file { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border:1px solid #dce2e7; border-radius:6px; background:white; color:#39434c; font-size:11px; font-weight:500; white-space:nowrap; }
+.file:hover { background:#f5f7f8; }
+.file svg { width:12px; height:12px; }
+.missing { padding:3px 9px; border-radius:6px; background:#fdeeed; color:#a3413b; font-size:11px; font-weight:600; }
+
+/* Pickup verification — one headline, three facts, the one staff action. */
+.pickup { margin-top:14px; padding:14px 16px; border:1px solid #e3e7eb; border-radius:10px; background:#fafbfc; }
+.good { border-color:#d5e6bf; background:#f7fbf1; }
+.info { border-color:#ecd3a3; background:#fffaf0; }
+.warn { border-color:#f0c9c6; background:#fdf7f6; }
+.pickupHead { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px 12px; }
+.pickupIcon { display:grid; place-items:center; width:34px; height:34px; flex:none; border-radius:9px; background:#edf0f2; color:#55616b; }
+.pickupIcon svg { width:16px; height:16px; }
+.good .pickupIcon { background:#e6f1d6; color:#4f7a1e; }
+.info .pickupIcon { background:#fbecd0; color:#8a5a12; }
+.warn .pickupIcon { background:#fbe1df; color:#a3413b; }
+.pickupWho { flex:1 1 220px; min-width:0; }
+.pickupTitle { margin-top:2px; font-size:13px; font-weight:600; }
+.pickupSub { margin-top:2px; font-size:11px; line-height:1.55; color:#66727c; }
+.facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px 20px; margin-top:12px; padding-top:12px; border-top:1px solid rgb(25 29 33 / 7%); }
+.fact { display:flex; gap:8px; min-width:0; }
+.factDot { display:grid; place-items:center; width:16px; height:16px; flex:none; margin-top:1px; border-radius:50%; background:#c9d1d8; color:white; }
+.factDot svg { width:9px; height:9px; }
+.factOk { background:#252c32; }
+.factWarn { background:#b07a19; }
+.fact strong { display:block; font-size:11px; font-weight:600; color:#39434c; }
+.fact small { display:block; font-size:11px; line-height:1.45; color:#74808a; overflow-wrap:anywhere; }
+.pickupHelp { margin-top:12px; padding-top:12px; border-top:1px solid rgb(25 29 33 / 7%); font-size:11px; line-height:1.65; color:#55616b; }
+.pickupHelp a { font-weight:600; text-decoration:underline; text-underline-offset:2px; }
+.recheck { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:10px; }
+
+/* Decision row: timestamps left, the verdict right. */
+.decision { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px 16px; margin-top:16px; padding-top:16px; border-top:1px solid #edf0f2; }
+.stamps { font-size:11px; line-height:1.7; color:#74808a; }
+.decide { display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+.decideButtons { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.hint { font-size:11px; color:#74808a; }
+.rejectButton { border-color:#f0c9c6!important; color:#b44848!important; }
+.revokeButton { border-color:#ecd3a3!important; color:#8a5a12!important; }
+.note { margin-bottom:14px; padding:12px 14px; border:1px solid #f0c9c6; border-radius:10px; background:#fdf7f6; }
+.note p:first-child { font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#a3413b; }
+.note p + p { margin-top:4px; font-size:12px; line-height:1.6; color:#6f2b27; }
+
+/* Reject modal */
+.reasons { display:flex; flex-wrap:wrap; gap:6px; }
+.reason { padding:5px 10px; border:1px solid transparent; border-radius:999px; background:#f0f2f4; color:#39434c; font-size:11px; font-weight:500; text-align:left; cursor:pointer; }
+.reason:hover { border-color:#f0c9c6; background:#fdeeed; color:#a3413b; }
+.counter { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:8px; font-size:11px; color:#74808a; }
+.counter svg { width:13px; height:13px; }
+.over { color:#b44848; font-weight:600; }
+
+/* Edit KYC modal */
+.sectionLabel { margin-bottom:8px; font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:#74808a; }
+.slot { display:flex; align-items:center; gap:10px; padding:10px; border:1px dashed #d6dde3; border-radius:10px; background:#fafbfc; }
+.slotFilled { border-style:solid; border-color:#d5e6bf; background:#f7fbf1; }
+.slotIcon { display:grid; place-items:center; width:32px; height:32px; flex:none; border-radius:8px; background:#edf0f2; color:#55616b; }
+.slotFilled .slotIcon { background:#e6f1d6; color:#4f7a1e; }
+.slotIcon svg { width:16px; height:16px; }
+.slot strong { display:block; font-size:12px; font-weight:600; }
+.slot a, .slot small { display:block; font-size:11px; color:#74808a; }
+.slot a { color:#4f7a1e; }
+.slot a:hover { text-decoration:underline; }
+
+@container kyc (max-width: 560px) {
+  .head { padding:18px 16px 14px; }
+  .body { padding:0 16px 16px; }
+  .decide { width:100%; align-items:stretch; }
+  .decideButtons > * { flex:1; }
+}

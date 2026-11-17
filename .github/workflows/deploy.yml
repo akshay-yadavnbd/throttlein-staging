@@ -1,0 +1,596 @@
+name: Build & deploy
+
+# Path-aware, image-based deployment for BOTH environments. Every app
+# (API, admin, storefront, AI assistant) ships as a Docker image and runs through
+# docker-compose.yml.
+#
+#   changes ──▶ verify ──▶ build (changed images only) ──▶ deploy
+#
+# Environments — the branch name IS the environment name:
+#   production  push to `production`  → compose project `throttlein`,
+#               images tagged <sha> + latest, ports 5000/3001/3000,
+#               BACKEND_DIR /var/www/api.throttlein.com
+#   staging     push to `staging`     → compose project `throttlein-staging`,
+#               images tagged staging-<sha> + staging, ports from the
+#               environment's API_PORT/ADMIN_PORT/STOREFRONT_PORT vars,
+#               BACKEND_DIR /var/www/api.staging.throttlein.com
+# Both stacks run on the same server. The build and deploy jobs run
+# under the GitHub Environment named after the branch, so secrets and
+# variables defined on that environment (Settings → Environments)
+# override the repo-level ones. Production keeps using the repo-level
+# values; staging overrides NEXT_PUBLIC_*, REVALIDATE_SECRET and the
+# BACKEND_DIR / *_PORT variables. SERVER_* and GHCR_TOKEN are shared.
+#
+# What triggers what (see the `changes` job filters):
+#   backend/**                                 → API checks + image + container
+#   admin/**                                   → admin checks + image + container
+#   frontend/**, scripts/check-theme-sync.js   → storefront checks + image + container
+#   chatbot/**                                 → assistant tests + image + container
+#   docker-compose.yml, this workflow          → everything
+# A manual run (workflow_dispatch) deploys everything by default; untick
+# the inputs to narrow it. Use a manual run to redeploy after a failed push
+# or when the server was rebuilt — path filters only look at the push diff.
+#
+# Triggers:
+#   - every push to the `production` or `staging` branch
+#   - manual run from the Actions tab via workflow_dispatch (pick the
+#     branch = environment; any other branch is refused). Use a manual
+#     run for the FIRST deploy of a new branch: the path filter diffs
+#     against the previous commit, and a fresh branch has none.
+#
+# The compose file is NEVER stored persistently on the server — it is
+# scp'd into a temp directory on each deploy and removed after.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   SERVER_HOST            server IP or hostname (shared by both envs)
+#   SERVER_USER            deploy user. Must own BACKEND_DIR (the API's
+#                          .env + uploads) of every environment and be
+#                          in the `docker` group.
+#   SERVER_SSH_KEY         private SSH key whose pub key is on the server
+#   SERVER_SSH_PORT        (optional) defaults to 22
+#   GHCR_TOKEN             PAT (classic) with read:packages scope.
+#                          The login username is derived automatically
+#                          from github.repository_owner — assumes the
+#                          PAT belongs to the same account that owns
+#                          this repo.
+#   REVALIDATE_SECRET      shared with the backend; storefront runtime env
+#   NEXT_PUBLIC_API_URL    e.g. https://api.throttlein.com/api
+#                          (staging env: https://api.staging.throttlein.com/api)
+#   NEXT_PUBLIC_UPLOADS_URL e.g. https://api.throttlein.com/uploads
+#   NEXT_PUBLIC_SITE_URL   e.g. https://throttlein.com  (used for
+#                          canonical tags, sitemap entries, OG image
+#                          URLs, JSON-LD @id values — must be set
+#                          or production canonicals fall back to
+#                          localhost and leak to Google).
+#   NEXT_PUBLIC_SELLER_URL e.g. https://seller.throttlein.com (seller
+#                          subdomain origin — drives the host-based
+#                          routing in frontend/proxy.ts; leave unset
+#                          to keep seller pages on the main domain).
+#   NEXT_PUBLIC_GTM_ID     e.g. GTM-XXXXXXX  (optional; Google Tag
+#                          Manager container ID. Leave secret empty
+#                          on non-prod envs to skip GTM injection.)
+#   NEXT_PUBLIC_GA_ID      e.g. G-XXXXXXXXXX  (optional; Google
+#                          Analytics 4 measurement ID.)
+#   NEXT_PUBLIC_CHATBOT_URL e.g. https://assistant.throttlein.com (AI
+#                          assistant origin; the seller dashboard and
+#                          admin load its widget. Unset hides the widget.)
+#
+# Actions variables (Settings → … → Variables, repo-level or per environment):
+#   API_PORT           host port of the API (default 5000). REQUIRED on
+#   ADMIN_PORT         host port of the admin panel (default 3001)   every
+#   STOREFRONT_PORT    host port of the storefront (default 3000)    non-prod env
+#   CHATBOT_PORT       host port of the AI assistant (default 5200)
+#   BACKEND_DIR        server dir with the API's .env, uploads/, private-uploads/
+#                      (default /var/www/api.throttlein.com for production,
+#                      /var/www/api.<env>.throttlein.com otherwise). Mounted
+#                      into the api container; the image itself holds no config.
+#                      A non-production environment is refused the
+#                      production directory.
+#   BACKEND_PM2_APP    name of the legacy PM2 process (default throttlein-api
+#                      on production, empty elsewhere). Only used once: the
+#                      first image deploy stops and removes it so the
+#                      container can take port 5000.
+#   BACKEND_HEALTH_URL local API health URL (default http://127.0.0.1:<API_PORT>/api/health)
+
+on:
+  push:
+    branches: [production, staging]
+  workflow_dispatch:
+    inputs:
+      backend:
+        description: Deploy API
+        type: boolean
+        default: true
+      admin:
+        description: Deploy admin panel
+        type: boolean
+        default: true
+      frontend:
+        description: Deploy storefront
+        type: boolean
+        default: true
+      chatbot:
+        description: Deploy AI assistant
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: ${{ github.repository_owner }}
+  # The branch is the environment. `production` keeps every name it had
+  # before staging existed; any other environment gets a `-<env>` suffix
+  # so the two stacks never collide on the shared server.
+  DEPLOY_ENV: ${{ github.ref_name }}
+  # Stable Compose project name keeps container identity (and the
+  # `<project>-api` / `<project>-admin` / `<project>-storefront` names)
+  # the same across deploys even though the compose file lives in a temp dir.
+  COMPOSE_PROJECT: ${{ github.ref_name == 'production' && 'throttlein' || format('throttlein-{0}', github.ref_name) }}
+  # Temp upload path on the server. Wiped after each deploy.
+  REMOTE_DIR: ${{ github.ref_name == 'production' && '/tmp/throttlein-deploy' || format('/tmp/throttlein-{0}-deploy', github.ref_name) }}
+  # Image tags: production → `<sha>` + `latest`; staging → `staging-<sha>`
+  # + `staging`. Same image names, so one GHCR package per app.
+  IMAGE_TAG: ${{ github.ref_name == 'production' && github.sha || format('{0}-{1}', github.ref_name, github.sha) }}
+  IMAGE_TAG_LATEST: ${{ github.ref_name == 'production' && 'latest' || github.ref_name }}
+
+# Serialize releases per environment; do not interrupt an in-progress
+# server update. Staging and production may deploy at the same time —
+# they are separate compose projects and the GHCR login is scoped per
+# deploy (DOCKER_CONFIG), so they do not interfere.
+concurrency:
+  group: throttlein-${{ github.ref_name }}-deploy
+  cancel-in-progress: false
+
+jobs:
+  # ───────────────────────── 1. What changed? ─────────────────────────
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.decide.outputs.backend }}
+      admin: ${{ steps.decide.outputs.admin }}
+      frontend: ${{ steps.decide.outputs.frontend }}
+      chatbot: ${{ steps.decide.outputs.chatbot }}
+      any: ${{ steps.decide.outputs.any }}
+      matrix: ${{ steps.decide.outputs.matrix }}
+      services: ${{ steps.decide.outputs.services }}
+    steps:
+      # Only the two deployable branches may run this workflow. A manual
+      # run picked on a feature branch would otherwise deploy that branch
+      # under an environment GitHub creates on the fly.
+      - name: Refuse unknown environment
+        env:
+          REF: ${{ github.ref_name }}
+        run: |
+          case "$REF" in
+            production|staging) echo "Environment: $REF" ;;
+            *) echo "::error::Branch '$REF' is not a deployable environment (production, staging)"; exit 1 ;;
+          esac
+
+      - uses: actions/checkout@v5
+        if: github.event_name == 'push'
+
+      # On push, diff against the previous commit of the branch
+      # (github.event.before). Not used for workflow_dispatch — there is
+      # no diff to look at, so the inputs decide.
+      - name: Detect changed paths
+        id: filter
+        if: github.event_name == 'push'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            infra:
+              - '.github/workflows/deploy.yml'
+              - '.github/workflows/security.yml'
+              - 'docker-compose.yml'
+            backend:
+              - 'backend/**'
+            admin:
+              - 'admin/**'
+              - 'scripts/check-theme-sync.js'
+            frontend:
+              - 'frontend/**'
+              - 'scripts/check-theme-sync.js'
+            chatbot:
+              - 'chatbot/**'
+
+      - name: Decide what to deploy
+        id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          INFRA: ${{ steps.filter.outputs.infra }}
+          F_BACKEND: ${{ steps.filter.outputs.backend }}
+          F_ADMIN: ${{ steps.filter.outputs.admin }}
+          F_FRONTEND: ${{ steps.filter.outputs.frontend }}
+          F_CHATBOT: ${{ steps.filter.outputs.chatbot }}
+          IN_BACKEND: ${{ inputs.backend }}
+          IN_ADMIN: ${{ inputs.admin }}
+          IN_FRONTEND: ${{ inputs.frontend }}
+          IN_CHATBOT: ${{ inputs.chatbot }}
+        run: |
+          if [[ "$EVENT" == "workflow_dispatch" ]]; then
+            backend="$IN_BACKEND"; admin="$IN_ADMIN"; frontend="$IN_FRONTEND"; chatbot="$IN_CHATBOT"
+          elif [[ "$INFRA" == "true" ]]; then
+            backend=true; admin=true; frontend=true; chatbot=true
+          else
+            backend="$F_BACKEND"; admin="$F_ADMIN"; frontend="$F_FRONTEND"; chatbot="$F_CHATBOT"
+          fi
+          # Normalise: anything other than the literal "true" means skip.
+          [[ "$backend" == "true" ]] || backend=false
+          [[ "$admin" == "true" ]] || admin=false
+          [[ "$frontend" == "true" ]] || frontend=false
+          [[ "$chatbot" == "true" ]] || chatbot=false
+
+          # Build matrix (one entry per image) + compose service list.
+          # `web` marks images that need the NEXT_PUBLIC_* build args.
+          matrix='[]'; services=''
+          if [[ "$backend" == "true" ]]; then
+            matrix=$(jq -c '. + [{"app":"backend","image":"throttlein-api","service":"api","web":false,"public_app_name":""}]' <<<"$matrix")
+            services="$services api"
+          fi
+          if [[ "$admin" == "true" ]]; then
+            matrix=$(jq -c '. + [{"app":"admin","image":"throttlein-admin","service":"admin","web":true,"public_app_name":"THROTTLEIN Admin"}]' <<<"$matrix")
+            services="$services admin"
+          fi
+          if [[ "$frontend" == "true" ]]; then
+            matrix=$(jq -c '. + [{"app":"frontend","image":"throttlein-frontend","service":"storefront","web":true,"public_app_name":"THROTTLEIN"}]' <<<"$matrix")
+            services="$services storefront"
+          fi
+          if [[ "$chatbot" == "true" ]]; then
+            matrix=$(jq -c '. + [{"app":"chatbot","image":"throttlein-assistant","service":"assistant","web":false,"public_app_name":""}]' <<<"$matrix")
+            services="$services assistant"
+          fi
+          any=false; [[ "$matrix" != "[]" ]] && any=true
+
+          {
+            echo "backend=$backend"
+            echo "admin=$admin"
+            echo "frontend=$frontend"
+            echo "chatbot=$chatbot"
+            echo "any=$any"
+            echo "matrix=$matrix"
+            echo "services=${services# }"
+          } >>"$GITHUB_OUTPUT"
+
+          echo "::notice title=Deploy plan::backend=$backend admin=$admin frontend=$frontend chatbot=$chatbot"
+          [[ "$any" == "true" ]] || echo "::notice::Nothing to deploy for this push."
+
+  # ───────────────────────── 2. Verify changed apps ───────────────────
+  verify:
+    needs: changes
+    if: needs.changes.outputs.any == 'true'
+    uses: ./.github/workflows/security.yml
+    with:
+      backend: ${{ needs.changes.outputs.backend }}
+      admin: ${{ needs.changes.outputs.admin }}
+      frontend: ${{ needs.changes.outputs.frontend }}
+      chatbot: ${{ needs.changes.outputs.chatbot }}
+
+  # ───────────────────────── 3. Build changed images ──────────────────
+  build:
+    needs: [changes, verify]
+    if: needs.changes.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Environment-scoped NEXT_PUBLIC_* secrets are baked into the web
+    # images, so the build must run under the target environment.
+    environment: ${{ github.ref_name }}
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.changes.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # GHCR image paths must be all-lowercase. GitHub orgs/users with
+      # mixed-case names would otherwise fail the push.
+      - name: Lowercase owner
+        id: owner
+        run: echo "lc=${OWNER,,}" >>"$GITHUB_OUTPUT"
+
+      # Keep the previous build's JS/CSS files. Next.js names them by content
+      # hash, and a deploy replaces the container, so a tab opened before
+      # the deploy asked for files that no longer existed: a ChunkLoadError
+      # and the "Something went wrong" screen on its next navigation. The
+      # files of the image currently deployed to this environment are
+      # carried into the new image (the Dockerfile lays the new build on
+      # top). Files older than RETAIN_DAYS are dropped, and the set is
+      # capped at RETAIN_MAX_MB so it can never grow without bound. The
+      # first build of an environment has no previous image: nothing to carry.
+      - name: Collect previous ${{ matrix.image }} static files
+        if: matrix.web
+        env:
+          PREVIOUS_IMAGE: ${{ env.REGISTRY }}/${{ steps.owner.outputs.lc }}/${{ matrix.image }}:${{ env.IMAGE_TAG_LATEST }}
+          RETAIN_DAYS: 14
+          RETAIN_MAX_MB: 300
+        run: |
+          dir="$RUNNER_TEMP/previous-static"
+          mkdir -p "$dir/app/.next/static"
+          if ! docker pull -q "$PREVIOUS_IMAGE" >/dev/null 2>&1; then
+            echo "::notice title=Static carry-over::No previous $PREVIOUS_IMAGE; nothing to carry"
+            exit 0
+          fi
+          cid=$(docker create "$PREVIOUS_IMAGE")
+          docker cp "$cid:/app/.next/static/." "$dir/app/.next/static/" || echo "::warning::Previous image has no /app/.next/static"
+          docker rm "$cid" >/dev/null
+          find "$dir/app/.next/static" -type f -mtime +"$RETAIN_DAYS" -delete
+          find "$dir/app/.next/static" -mindepth 1 -type d -empty -delete
+          size=$(du -sm "$dir/app/.next/static" | cut -f1)
+          if (( size > RETAIN_MAX_MB )); then
+            echo "::warning title=Static carry-over::${size} MB of old files is over the ${RETAIN_MAX_MB} MB cap; starting fresh this deploy"
+            rm -rf "$dir/app/.next/static" && mkdir -p "$dir/app/.next/static" && size=0
+          fi
+          echo "::notice title=Static carry-over::$(find "$dir/app/.next/static" -type f | wc -l) files (${size} MB) from $PREVIOUS_IMAGE"
+
+      # Web images inline NEXT_PUBLIC_* at build time; the API and
+      # assistant images take no build args (all config comes from the
+      # server's .env / chatbot.env).
+      - name: Build & push ${{ matrix.image }} (web)
+        if: matrix.web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.app }}
+          file: ./${{ matrix.app }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.lc }}/${{ matrix.image }}:${{ env.IMAGE_TAG_LATEST }}
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.lc }}/${{ matrix.image }}:${{ env.IMAGE_TAG }}
+          # Replaces the Dockerfile's `previous_static` stage (see the step above).
+          build-contexts: |
+            previous_static=${{ runner.temp }}/previous-static
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_UPLOADS_URL=${{ secrets.NEXT_PUBLIC_UPLOADS_URL }}
+            NEXT_PUBLIC_APP_NAME=${{ matrix.public_app_name }}
+            NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
+            NEXT_PUBLIC_SELLER_URL=${{ secrets.NEXT_PUBLIC_SELLER_URL }}
+            NEXT_PUBLIC_GTM_ID=${{ secrets.NEXT_PUBLIC_GTM_ID }}
+            NEXT_PUBLIC_GA_ID=${{ secrets.NEXT_PUBLIC_GA_ID }}
+            NEXT_PUBLIC_CHATBOT_URL=${{ secrets.NEXT_PUBLIC_CHATBOT_URL }}
+          # Per-app cache scope so one app's build never evicts another's
+          # layers. First run ~5min, subsequent builds ~1-2min. The scope
+          # is shared by both environments on purpose: the dependency
+          # layers are identical, only the `next build` layer (which
+          # inlines NEXT_PUBLIC_*) differs.
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+      - name: Build & push ${{ matrix.image }} (server)
+        if: ${{ !matrix.web }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.app }}
+          file: ./${{ matrix.app }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.lc }}/${{ matrix.image }}:${{ env.IMAGE_TAG_LATEST }}
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.lc }}/${{ matrix.image }}:${{ env.IMAGE_TAG }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  # ───────────────────────── 4. Deploy changed containers ─────────────
+  deploy:
+    needs: [changes, build]
+    if: needs.changes.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ github.ref_name }}
+    env:
+      IS_PRODUCTION: ${{ github.ref_name == 'production' }}
+      # Defaults are the production layout. A non-production environment
+      # never falls back to the production directory or ports: its
+      # BACKEND_DIR default follows the hostname convention and the ports
+      # must be set explicitly (validated below).
+      BACKEND_DIR: ${{ vars.BACKEND_DIR || (github.ref_name == 'production' && '/var/www/api.throttlein.com' || format('/var/www/api.{0}.throttlein.com', github.ref_name)) }}
+      BACKEND_PM2_APP: ${{ vars.BACKEND_PM2_APP || (github.ref_name == 'production' && 'throttlein-api' || '') }}
+      API_PORT: ${{ vars.API_PORT || (github.ref_name == 'production' && '5000' || '') }}
+      ADMIN_PORT: ${{ vars.ADMIN_PORT || (github.ref_name == 'production' && '3001' || '') }}
+      STOREFRONT_PORT: ${{ vars.STOREFRONT_PORT || (github.ref_name == 'production' && '3000' || '') }}
+      CHATBOT_PORT: ${{ vars.CHATBOT_PORT || (github.ref_name == 'production' && '5200' || '') }}
+    steps:
+      # BACKEND_HEALTH_URL is derived from API_PORT unless the environment
+      # overrides it; it is exported through GITHUB_ENV for the steps below.
+      - name: Validate deployment settings
+        env:
+          HEALTH_URL_OVERRIDE: ${{ vars.BACKEND_HEALTH_URL }}
+        run: |
+          for v in API_PORT ADMIN_PORT STOREFRONT_PORT CHATBOT_PORT; do
+            [[ "${!v}" =~ ^[0-9]{2,5}$ ]] || { echo "::error::$v must be set as an Actions variable on the '$DEPLOY_ENV' environment (got '${!v}')"; exit 1; }
+          done
+          [[ $(printf '%s\n' "$API_PORT" "$ADMIN_PORT" "$STOREFRONT_PORT" "$CHATBOT_PORT" | sort -u | wc -l) -eq 4 ]] || { echo "::error::API_PORT, ADMIN_PORT, STOREFRONT_PORT and CHATBOT_PORT must differ"; exit 1; }
+          if [[ "$IS_PRODUCTION" != "true" ]]; then
+            for v in API_PORT ADMIN_PORT STOREFRONT_PORT CHATBOT_PORT; do
+              case "${!v}" in 5000|3000|3001|5200) echo "::error::$v=${!v} is a production port; a non-production environment needs its own"; exit 1 ;; esac
+            done
+            [[ "$BACKEND_DIR" != "/var/www/api.throttlein.com" ]] || { echo "::error::A non-production environment must not use the production BACKEND_DIR"; exit 1; }
+          fi
+          [[ "$BACKEND_DIR" = /* && "$BACKEND_DIR" != / ]] || { echo "::error::BACKEND_DIR must be an absolute backend directory"; exit 1; }
+          BACKEND_HEALTH_URL="${HEALTH_URL_OVERRIDE:-http://127.0.0.1:${API_PORT}/api/health}"
+          [[ "$BACKEND_HEALTH_URL" =~ ^http://(127\.0\.0\.1|localhost):[0-9]+/api/health$ ]] || { echo "::error::BACKEND_HEALTH_URL must point to the local API /api/health endpoint"; exit 1; }
+          echo "BACKEND_HEALTH_URL=$BACKEND_HEALTH_URL" >>"$GITHUB_ENV"
+          echo "::notice title=Deploy target::env=$DEPLOY_ENV project=$COMPOSE_PROJECT dir=$BACKEND_DIR ports api=$API_PORT admin=$ADMIN_PORT storefront=$STOREFRONT_PORT assistant=$CHATBOT_PORT"
+
+      - name: Checkout (compose file only)
+        uses: actions/checkout@v5
+        with:
+          sparse-checkout: |
+            docker-compose.yml
+          sparse-checkout-cone-mode: false
+
+      - name: Lowercase owner
+        id: owner
+        run: echo "lc=${OWNER,,}" >>"$GITHUB_OUTPUT"
+
+      # Ensure the remote temp directory exists and is empty before we
+      # copy. Running this in its own step keeps the scp step's source
+      # list simple.
+      - name: Prepare remote staging directory
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -e
+            rm -rf "${{ env.REMOTE_DIR }}"
+            mkdir -p "${{ env.REMOTE_DIR }}"
+
+      - name: Copy compose file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT || 22 }}
+          source: docker-compose.yml
+          target: ${{ env.REMOTE_DIR }}
+
+      # Only the services whose image was rebuilt get pulled/restarted.
+      # Each service has its own tag variable: a changed service is pinned
+      # to this commit, an unchanged one keeps running its current
+      # container (compose never touches services not named in `up`).
+      # The API goes first and must pass its health + revision check
+      # before the web containers restart.
+      - name: Pull & restart changed services
+        env:
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_TOKEN }}
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+          SERVICES: ${{ needs.changes.outputs.services }}
+          DEPLOY_API: ${{ needs.changes.outputs.backend }}
+          API_TAG: ${{ needs.changes.outputs.backend == 'true' && env.IMAGE_TAG || env.IMAGE_TAG_LATEST }}
+          ADMIN_TAG: ${{ needs.changes.outputs.admin == 'true' && env.IMAGE_TAG || env.IMAGE_TAG_LATEST }}
+          STOREFRONT_TAG: ${{ needs.changes.outputs.frontend == 'true' && env.IMAGE_TAG || env.IMAGE_TAG_LATEST }}
+          ASSISTANT_TAG: ${{ needs.changes.outputs.chatbot == 'true' && env.IMAGE_TAG || env.IMAGE_TAG_LATEST }}
+          DEPLOY_COMMIT: ${{ github.sha }}
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_SSH_PORT || 22 }}
+          command_timeout: 15m
+          script_stop: true
+          # OWNER is exported so the ${OWNER} expansion in
+          # docker-compose.yml resolves to the lowercased GitHub owner.
+          envs: DEPLOY_ENV,COMPOSE_PROJECT,REMOTE_DIR,GHCR_READ_TOKEN,REVALIDATE_SECRET,SERVICES,DEPLOY_API,API_TAG,ADMIN_TAG,STOREFRONT_TAG,ASSISTANT_TAG,DEPLOY_COMMIT,BACKEND_DIR,BACKEND_PM2_APP,BACKEND_HEALTH_URL,API_PORT,ADMIN_PORT,STOREFRONT_PORT,CHATBOT_PORT
+          script: |
+            set -e
+            export OWNER='${{ steps.owner.outputs.lc }}'
+            export BACKEND_DIR BACKEND_UID="$(id -u)" BACKEND_GID="$(id -g)"
+            # Compose variables that place this environment's stack:
+            # container names and host ports (see docker-compose.yml).
+            export CONTAINER_PREFIX="$COMPOSE_PROJECT" API_PORT ADMIN_PORT STOREFRONT_PORT CHATBOT_PORT APP_ENV="$DEPLOY_ENV"
+            # Scope the registry login to this deploy's temp directory so a
+            # concurrent deploy of the other environment can neither reuse
+            # nor log out this session. Removed with REMOTE_DIR below.
+            export DOCKER_CONFIG="$REMOTE_DIR/.docker"
+            cd "$REMOTE_DIR"
+            # The assistant needs its own config on the server. Until that
+            # one-time setup is done (docs/STAGING.md), skip it rather than
+            # fail the deploy of the other apps.
+            if [[ " $SERVICES " == *" assistant "* && ! -f "$BACKEND_DIR/chatbot.env" ]]; then
+              echo "WARNING: $BACKEND_DIR/chatbot.env is missing; skipping the assistant" >&2
+              SERVICES=$(sed 's/\bassistant\b//' <<<"$SERVICES" | xargs || true)
+            fi
+            [[ -n "$SERVICES" ]] || { echo "Nothing left to deploy"; rm -rf "$REMOTE_DIR"; exit 0; }
+            echo "Deploying $DEPLOY_ENV ($COMPOSE_PROJECT) services: $SERVICES (api=$API_TAG admin=$ADMIN_TAG storefront=$STOREFRONT_TAG assistant=$ASSISTANT_TAG)"
+
+            if [[ "$DEPLOY_API" == "true" ]]; then
+              # The image mounts these from the host; refuse to start a
+              # container that would boot without config or lose uploads.
+              [[ -f "$BACKEND_DIR/.env" ]] || { echo "Missing $BACKEND_DIR/.env" >&2; exit 1; }
+              mkdir -p "$BACKEND_DIR/uploads" "$BACKEND_DIR/private-uploads"
+              # One-time migration from PM2: the container needs port 5000.
+              # Production only (BACKEND_PM2_APP is empty elsewhere).
+              if [[ -n "$BACKEND_PM2_APP" ]] && command -v pm2 >/dev/null 2>&1 && pm2 describe "$BACKEND_PM2_APP" >/dev/null 2>&1; then
+                echo "Retiring legacy PM2 process $BACKEND_PM2_APP"
+                pm2 delete "$BACKEND_PM2_APP"
+                pm2 save --force || true
+              fi
+            fi
+
+            # Server-side login uses its own PAT — the workflow's
+            # GITHUB_TOKEN doesn't follow the SSH session. The owner
+            # name (lowercased) is used as the login username; GHCR
+            # accepts this as long as the PAT belongs to that account.
+            printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io \
+              -u "$OWNER" --password-stdin
+            # shellcheck disable=SC2086  # SERVICES is a space-separated list
+            docker compose -p "$COMPOSE_PROJECT" pull $SERVICES
+
+            if [[ "$DEPLOY_API" == "true" ]]; then
+              docker compose -p "$COMPOSE_PROJECT" up -d --no-deps api
+              # Validate this revision, not merely a stale process returning 200.
+              # The API reports DEPLOY_COMMIT, which compose sets to its image
+              # tag (API_TAG): the bare sha on production, <env>-<sha> elsewhere.
+              # Runs inside the container (host network, so 127.0.0.1:$API_PORT
+              # is the same socket Nginx proxies to) — no curl/node needed on host.
+              # Env values are passed explicitly: `-e NAME` without a value is
+              # not forwarded by `docker compose exec`.
+              # The function and the retry loop must each stay on ONE line: with
+              # script_stop the SSH action inserts `if [ $? -ne 0 ]; then exit`
+              # after every script line. Inside a multi-line function that turns
+              # the first failed attempt (API still booting) into a script exit,
+              # and inside a multi-line quoted string it breaks the JS.
+              check_revision() { docker compose -p "$COMPOSE_PROJECT" exec -T -e "HEALTH_URL=$BACKEND_HEALTH_URL" -e "EXPECTED=$API_TAG" api node -e 'fetch(process.env.HEALTH_URL).then(r=>r.json()).then(d=>{console.log("health:",JSON.stringify(d));process.exit(d.status==="ok"&&d.revision===process.env.EXPECTED?0:1)}).catch(e=>{console.error("health fetch failed:",e.message);process.exit(1)})'; }
+              ok=false
+              for attempt in $(seq 1 45); do if check_revision; then ok=true; break; fi; sleep 2; done
+              if [[ "$ok" != "true" ]]; then
+                echo "API health/revision check failed for $API_TAG. Container status and recent logs:" >&2
+                docker compose -p "$COMPOSE_PROJECT" ps api >&2 || true
+                docker compose -p "$COMPOSE_PROJECT" logs --tail 60 api >&2 || true
+                exit 1
+              fi
+              echo "API healthy at revision $API_TAG"
+            fi
+
+            web_services=$(sed 's/\bapi\b//' <<<"$SERVICES" | xargs || true)
+            if [[ -n "$web_services" ]]; then
+              # shellcheck disable=SC2086
+              docker compose -p "$COMPOSE_PROJECT" up -d --no-deps $web_services
+            fi
+
+            # The assistant exits on boot when chatbot.env is incomplete
+            # (CHATBOT_SECRET, GROQ_API_KEY), so wait for /health to answer.
+            # Loop on one line for the same script_stop reason as above.
+            if [[ " $SERVICES " == *" assistant "* ]]; then
+              assistant_ok() { docker compose -p "$COMPOSE_PROJECT" exec -T assistant node -e 'fetch("http://127.0.0.1:"+process.env.PORT+"/health").then(r=>r.json()).then(d=>{console.log("assistant health:",JSON.stringify(d));process.exit(d.ok?0:1)}).catch(e=>{console.error("assistant health failed:",e.message);process.exit(1)})'; }
+              ok=false
+              for attempt in $(seq 1 30); do if assistant_ok; then ok=true; break; fi; sleep 2; done
+              if [[ "$ok" != "true" ]]; then
+                echo "Assistant health check failed for $ASSISTANT_TAG. Container status and recent logs:" >&2
+                docker compose -p "$COMPOSE_PROJECT" ps assistant >&2 || true
+                docker compose -p "$COMPOSE_PROJECT" logs --tail 60 assistant >&2 || true
+                exit 1
+              fi
+              echo "Assistant healthy at $ASSISTANT_TAG"
+            fi
+
+            # Wipe untagged image layers so disk usage stays bounded.
+            docker image prune -f
+            docker logout ghcr.io
+            # Compose file is ephemeral — remove the staging dir so the
+            # server has no persistent copy of it.
+            cd /
+            rm -rf "$REMOTE_DIR"
+            echo "Deployed $DEPLOY_ENV: $DEPLOY_COMMIT ($SERVICES)"

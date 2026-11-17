@@ -1,0 +1,23 @@
+/* Cache inspector charts on top of AdminForm.module.css / detail.module.css. */
+.visuals { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.3fr); gap:24px; }
+.donuts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.donut { display:flex; align-items:center; gap:12px; padding:12px; border:1px solid #e9edf0; border-radius:10px; }
+.donut svg { flex:none; }
+.donut dt { font-size:11px; color:#87919a; }
+.donut dd { margin-top:2px; font-size:12px; font-weight:500; color:#252c32; }
+.bars { display:flex; flex-direction:column; gap:12px; }
+.barsHead { display:flex; justify-content:space-between; gap:12px; font-size:12px; color:#55616b; }
+.barsHead b { font-weight:600; color:#252c32; }
+.bar { display:flex; flex-direction:column; gap:5px; }
+.barLabel { display:flex; justify-content:space-between; gap:12px; font-size:12px; }
+.barLabel span:first-child { font-weight:500; color:#2c363e; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.barLabel span:last-child { color:#74808a; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.track { height:7px; border-radius:999px; background:#eef1f3; overflow:hidden; }
+.fill { height:100%; border-radius:999px; background:#191d21; transition:width .4s; }
+.mono { font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11px; word-break:break-all; }
+.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.advice { display:flex; flex-direction:column; gap:8px; }
+.advice li { display:flex; gap:8px; font-size:12px; line-height:1.6; color:#39434c; }
+.advice li::before { content:''; width:6px; height:6px; margin-top:7px; flex:none; border-radius:50%; background:#b07a19; }
+@media(max-width:900px) { .visuals { grid-template-columns:1fr; } }
+@media(max-width:560px) { .donuts { grid-template-columns:1fr; } }

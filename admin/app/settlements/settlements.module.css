@@ -1,0 +1,63 @@
+/* Settlement-specific pieces on top of components/WorkspaceList.module.css. */
+
+/* Week picker in the panel header. */
+.weekNav { display:inline-flex; align-items:center; border:1px solid #e3e7eb; border-radius:8px; background:white; }
+.weekNav button { display:grid; place-items:center; width:34px; height:36px; color:#55616b; cursor:pointer; }
+.weekNav button:hover:not(:disabled) { background:#f5f7f8; color:#252c32; }
+.weekNav button:disabled { opacity:.35; cursor:default; }
+.weekNav button svg { width:15px; height:15px; }
+.weekLabel { padding:0 12px; border-inline:1px solid #e9edf0; font-size:12px; font-weight:600; color:#252c32; white-space:nowrap; line-height:36px; }
+.weekLabel small { margin-left:6px; font-weight:500; color:#8a5a12; }
+
+/* Summary strip under the header — the week's money at a glance. */
+.summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); border-top:1px solid #edf0f2; }
+.summary > div { padding:14px 22px; border-right:1px solid #edf0f2; min-width:0; }
+.summary > div:last-child { border-right:0; }
+.summary dt { font-size:11px; color:#87919a; }
+.summary dd { margin-top:4px; font-size:16px; font-weight:600; letter-spacing:-.01em; font-variant-numeric:tabular-nums; }
+.summary dd small { display:block; margin-top:2px; font-size:11px; font-weight:400; color:#87919a; }
+.warn { color:#b07a19; }
+.danger { color:#b44848; }
+
+/* Seller row bits. */
+.bank { font-size:11px; color:#8a939b; }
+.noBank { color:#b44848; }
+.missing { display:inline-flex; align-items:center; gap:4px; margin-top:3px; font-size:11px; font-weight:600; color:#b07a19; }
+.deduct { color:#8a939b; }
+.rowEnd { display:flex; align-items:center; justify-content:flex-end; gap:6px; }
+.expand { display:grid; place-items:center; width:32px; height:32px; border:1px solid #e3e7eb; border-radius:8px; background:white; color:#74808a; cursor:pointer; transition:background .15s,color .15s; }
+.expand:hover { border-color:#c9d1d8; color:#303942; }
+.expand svg { width:15px; height:15px; transition:transform .15s; }
+.expand[aria-expanded='true'] svg { transform:rotate(180deg); }
+.expand[aria-expanded='true'] { background:#191d21; border-color:#191d21; color:white; }
+
+/* Expanded parcels under a seller row. */
+.linesRow > td { padding:0 !important; background:#fafbfc; }
+.lines { padding:14px 22px 18px 56px; }
+.linesTable { width:100%; border-collapse:collapse; }
+.linesTable th { padding:0 12px 8px 0; text-align:left; font-size:11px; font-weight:500; color:#87919a; white-space:nowrap; }
+.linesTable td { padding:9px 12px 9px 0; border-top:1px solid #edf0f2; font-size:12px; vertical-align:middle; }
+.linesTable .num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.linesTable th.num { text-align:right; }
+.setCharge { display:inline-flex; align-items:center; min-height:28px; padding:4px 10px; border:1px solid #dce2e7; border-radius:6px; background:white; color:#39434c; font-size:11px; font-weight:500; white-space:nowrap; cursor:pointer; }
+.setCharge:hover { background:#f5f7f8; }
+.setChargeWarn { border-color:#ecd3a3; color:#8a5a12; background:#fffaf0; }
+.setChargeWarn:hover { background:#fbf1dc; }
+
+/* Narrow panel: lines as a list inside the card. */
+.cardLines { margin-top:12px; border-top:1px solid #edf0f2; padding-top:10px; display:grid; gap:8px; }
+.cardLine { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; font-size:12px; }
+.cardLine small { display:block; margin-top:2px; font-size:11px; color:#8a939b; }
+
+/* Pay dialog facts. */
+.facts { display:grid; gap:0; border:1px solid #e9edf0; border-radius:10px; overflow:hidden; }
+.facts > div { display:flex; justify-content:space-between; gap:14px; padding:9px 14px; font-size:12px; }
+.facts > div + div { border-top:1px solid #f0f2f4; }
+.facts dt { color:#74808a; }
+.facts dd { font-weight:500; text-align:right; font-variant-numeric:tabular-nums; }
+.facts .net dd { font-size:14px; font-weight:600; }
+
+@container list (max-width: 900px) {
+  .summary > div { padding:12px 16px; }
+  .lines { padding:12px 16px 16px; }
+}

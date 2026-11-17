@@ -1,0 +1,132 @@
+# docker-compose.yml — runtime for the THROTTLEIN API, admin,
+# storefront and AI assistant. One file serves BOTH environments (production and staging)
+# on the same server; every environment-specific value is a variable
+# with the production value as its default. This file lives in the repo
+# and is shipped to the server on every deploy by the GitHub Actions
+# workflow — there is NO persistent copy of it on the server.
+#
+# Workflow:
+#   - GitHub Actions builds the images from /backend, /admin,
+#     /frontend and /chatbot and pushes them to GHCR on every push to `production`
+#     or `staging` (only the apps whose files changed).
+#   - The deploy job scp's this file into a temp directory on the
+#     server, runs `docker compose pull <services> && up -d <services>`
+#     for the services whose image changed, then deletes the temp
+#     directory. The compose project name (`throttlein` for production,
+#     `throttlein-staging` for staging) keeps container identity stable
+#     across deploys and keeps the two stacks apart.
+#   - API_TAG / ADMIN_TAG / STOREFRONT_TAG / ASSISTANT_TAG pin each service to the commit
+#     that built it. An unchanged service is not named in `up`, so it
+#     keeps its running container regardless of the tag default here.
+#
+# Port binding (production defaults; staging uses API_PORT=5100,
+# ADMIN_PORT=3101, STOREFRONT_PORT=3100, CHATBOT_PORT=5201):
+#   - api         → host 127.0.0.1:${API_PORT}        (host network; proxied by Nginx api.<domain>)
+#   - assistant   → host 127.0.0.1:${CHATBOT_PORT}    (host network; proxied by Nginx assistant.<domain>)
+#   - admin       → host 127.0.0.1:${ADMIN_PORT}      (proxied by Nginx admin.<domain>)
+#   - storefront  → host 127.0.0.1:${STOREFRONT_PORT} (proxied by Nginx <domain>)
+# Web containers bind to loopback only so they aren't exposed to the
+# public internet — all traffic comes through Nginx + TLS.
+#
+# Variables set by the deploy workflow:
+#   OWNER            lowercased GitHub owner (image path)
+#   *_TAG            image tag per service (commit SHA, prefixed with the
+#                    environment name outside production)
+#   CONTAINER_PREFIX container name prefix (throttlein / throttlein-staging)
+#   API_PORT, ADMIN_PORT, STOREFRONT_PORT, CHATBOT_PORT  host ports, see above
+#   BACKEND_DIR      server directory holding the API's .env, uploads/ and
+#                    private-uploads/ (default /var/www/api.throttlein.com;
+#                    staging: /var/www/api.staging.throttlein.com), plus the
+#                    assistant's chatbot.env
+#   BACKEND_UID/GID  host account that owns BACKEND_DIR; the API runs as
+#                    that user so files written to the volumes keep the same
+#                    ownership the PM2 process produced.
+# For a local `docker compose up` test on the server, run with:
+#   OWNER=<github-user> BACKEND_DIR=/var/www/api.throttlein.com \
+#     BACKEND_UID=$(id -u) BACKEND_GID=$(id -g) docker compose -p throttlein up -d
+
+services:
+  api:
+    image: ghcr.io/${OWNER}/throttlein-api:${API_TAG:-latest}
+    container_name: ${CONTAINER_PREFIX:-throttlein}-api
+    restart: unless-stopped
+    # Host networking keeps the API reachable exactly where PM2 served it
+    # (127.0.0.1:5000; staging binds 127.0.0.1:5100 via API_PORT) and lets
+    # the server's existing .env keep working:
+    # REDIS_HOST=127.0.0.1, a local MongoDB, TRUST_PROXY=127.0.0.1 for
+    # Nginx, and FRONTEND_ORIGIN revalidation calls all resolve the same
+    # way they did under PM2. No port mapping needed (or allowed).
+    network_mode: host
+    user: "${BACKEND_UID:-1000}:${BACKEND_GID:-1000}"
+    env_file:
+      - ${BACKEND_DIR:-/var/www/api.throttlein.com}/.env
+    # `environment` overrides env_file: these must not drift per server.
+    # APP_ENV names the deploy target (production / staging) so the API
+    # knows whether it is the live site; NODE_ENV stays production on
+    # both so security behaviour is identical.
+    environment:
+      - NODE_ENV=production
+      - APP_ENV=${APP_ENV:-production}
+      - PORT=${API_PORT:-5000}
+      - DEPLOY_COMMIT=${API_TAG:-local}
+    volumes:
+      - ${BACKEND_DIR:-/var/www/api.throttlein.com}/uploads:/app/uploads
+      - ${BACKEND_DIR:-/var/www/api.throttlein.com}/private-uploads:/app/private-uploads
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||5000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+  admin:
+    image: ghcr.io/${OWNER}/throttlein-admin:${ADMIN_TAG:-latest}
+    container_name: ${CONTAINER_PREFIX:-throttlein}-admin
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${ADMIN_PORT:-3001}:3000"
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # AI assistant (chatbot/). No database, no volumes: it talks to Groq and
+  # to the API as the signed-in user. Host networking because the service
+  # binds 127.0.0.1 only and reaches the API on loopback (BACKEND_API_URL
+  # in chatbot.env, e.g. http://127.0.0.1:5000/api).
+  assistant:
+    image: ghcr.io/${OWNER}/throttlein-assistant:${ASSISTANT_TAG:-latest}
+    container_name: ${CONTAINER_PREFIX:-throttlein}-assistant
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - ${BACKEND_DIR:-/var/www/api.throttlein.com}/chatbot.env
+    environment:
+      - NODE_ENV=production
+      - PORT=${CHATBOT_PORT:-5200}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||5200)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  storefront:
+    image: ghcr.io/${OWNER}/throttlein-frontend:${STOREFRONT_TAG:-latest}
+    container_name: ${CONTAINER_PREFIX:-throttlein}-storefront
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${STOREFRONT_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

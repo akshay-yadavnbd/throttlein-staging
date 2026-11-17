@@ -1,0 +1,8 @@
+/* Blog-specific pieces on top of components/WorkspaceList.module.css. */
+.tagCloud { display:flex; flex-wrap:wrap; gap:8px; padding:18px 22px 22px; border-top:1px solid #edf0f2; }
+.tag { display:inline-flex; align-items:center; gap:6px; padding:4px 4px 4px 12px; border:1px solid #e3e7eb; border-radius:999px; background:white; font-size:12px; }
+.tagName { font-weight:600; color:#2c363e; }
+.tagCount { padding:1px 6px; border-radius:999px; background:#f0f2f4; color:#74808a; font-size:10px; font-weight:600; font-variant-numeric:tabular-nums; }
+.tagRemove { display:grid; place-items:center; width:22px; height:22px; border-radius:50%; color:#8a939b; cursor:pointer; }
+.tagRemove:hover { background:#fdeeed; color:#a3413b; }
+@container list (max-width: 900px) { .tagCloud { padding:16px; } }

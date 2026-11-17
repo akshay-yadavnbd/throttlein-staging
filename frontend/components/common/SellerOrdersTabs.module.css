@@ -1,0 +1,45 @@
+.navigation {
+  display: flex;
+  gap: 26px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid #e1e6ea;
+  overflow-x: auto;
+}
+.navigation > a {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 0 13px;
+  border-bottom: 2px solid transparent;
+  font-size: 12px;
+  white-space: nowrap;
+  color: #74808a;
+}
+.navigation > a:hover {
+  color: #303942;
+}
+.navigation > a[aria-current="page"] {
+  border-color: #303942;
+  color: #303942;
+  font-weight: 600;
+}
+.navigation > a > span {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #fce9e4;
+  color: #a85e49;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.navigation > a:focus-visible {
+  outline: 2px solid #617d26;
+  outline-offset: -2px;
+}
+@media (max-width: 540px) {
+  .navigation {
+    gap: 22px;
+  }
+  .navigation > a {
+    font-size: 11px;
+  }
+}

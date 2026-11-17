@@ -1,0 +1,35 @@
+{
+  "fileSize": {},
+  "modelImportsOutsideModule": {
+    "Order": [
+      "database/seed/seedDemoData.js",
+      "modules/admin/order-feed.repository.js",
+      "modules/catalog/reviews.repository.js",
+      "modules/customers/cart-reminders.repository.js",
+      "modules/mcp/tools.repository.js",
+      "modules/payouts/payouts.repository.js",
+      "routes/mock-shiprocket/lookups.js",
+      "utils/privateFiles.js"
+    ],
+    "CheckoutIntent": ["modules/customers/checkout-failures.repository.js", "utils/retainCheckoutIntents.js"],
+    "Product": [
+      "database/seed/seedDemoData.js",
+      "database/seed/seedDemoProducts.js",
+      "database/seed/seedSampleProducts.js",
+      "modules/admin/products.repository.js",
+      "modules/catalog/brands.repository.js",
+      "modules/catalog/categories.repository.js",
+      "modules/catalog/reviews.repository.js",
+      "modules/customers/cart.repository.js",
+      "modules/mcp/tools.repository.js",
+      "modules/offers/offers.repository.js",
+      "modules/offline-sales/offline-sales.repository.js",
+      "modules/orders/inventory.repository.js",
+      "modules/orders/tax-invoice.repository.js",
+      "modules/seller-media/seller-media.repository.js",
+      "routes/sellerRoutes.js",
+      "utils/notifyRestock.js"
+    ]
+  },
+  "legacyResponseShapes": []
+}

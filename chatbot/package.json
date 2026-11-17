@@ -1,0 +1,22 @@
+{
+  "name": "throttlein-assistant",
+  "version": "1.0.0",
+  "description": "Throttlein AI assistant: a Groq-powered product-management chatbot for seller and superadmin dashboards, acting through an MCP server over the public API (no database access).",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "zod": "^4.6.7"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  }
+}

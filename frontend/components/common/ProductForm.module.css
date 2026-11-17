@@ -1,0 +1,232 @@
+.root {
+  --foreground: #252c32;
+  --muted: #74808a;
+  --border: #e3e7eb;
+  --surface-tertiary: #f7f9fa;
+  background: white;
+  border: 1px solid #e3e7eb;
+  border-radius: 12px;
+  box-shadow: none;
+  overflow: visible;
+}
+.body {
+  padding: 24px;
+  overflow: visible;
+  display: block;
+}
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+}
+.form > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  min-width: 0;
+}
+.form aside {
+  position: static;
+  padding: 20px;
+  background: #fafbfc;
+  border: 1px solid #e3e7eb;
+  border-radius: 10px;
+}
+.modeToggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 18px;
+  border: 1px solid #e3e7eb;
+  border-radius: 10px;
+  background: #fafbfc;
+}
+.modeToggle :global(.text-sm) {
+  font-size: 13px;
+}
+.modeToggle :global(.text-xs) {
+  font-size: 11px;
+  margin-top: 5px;
+}
+.importPanel {
+  margin-bottom: 24px;
+  border: 1px solid #e3e7eb;
+  border-radius: 10px;
+  background: #fafbfc;
+  overflow: hidden;
+}
+.importPanel summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 18px;
+  cursor: pointer;
+  list-style: none;
+}
+.importPanel summary::-webkit-details-marker {
+  display: none;
+}
+.importPanel summary strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.importPanel summary span span {
+  display: block;
+  margin-top: 5px;
+  color: #74808a;
+  font-size: 11px;
+}
+.importPanel summary svg {
+  flex: none;
+  color: #74808a;
+}
+.importPanel[open] summary svg {
+  transform: rotate(180deg);
+}
+.importPanel > :not(summary) {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid #e3e7eb;
+  border-radius: 0;
+  background: white;
+}
+.importPanel summary:hover {
+  background: #f3f5f7;
+}
+.root .inputWrapper {
+  min-height: 44px;
+  border: 1px solid #e3e7eb;
+  border-radius: 8px;
+  background: white;
+  box-shadow: none;
+}
+.root .inputWrapper[data-hover="true"] {
+  border-color: #bbc5cd;
+}
+.root [data-slot="label"] {
+  font-size: 12px;
+  color: #46525c;
+  font-weight: 500;
+}
+.root [data-slot="input"] {
+  font-size: 13px;
+}
+.sectionHeading {
+  grid-column: 1 / -1;
+  padding-top: 24px;
+  border-top: 1px solid #e3e7eb;
+}
+.sectionHeading:first-child {
+  padding-top: 0;
+  border: 0;
+}
+.sectionHeading h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+.sectionHeading p {
+  color: #74808a;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.actions {
+  grid-column: 1 / -1;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  margin: 0 -24px -24px;
+  padding: 16px 24px;
+  background: #fff;
+  border-top: 1px solid #e3e7eb;
+  border-radius: 0 0 12px 12px;
+}
+.actionButtons {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.primary {
+  background: #191d21;
+  color: #fff;
+  border: 1px solid #191d21;
+  border-radius: 8px;
+  min-height: 40px;
+  font-size: 12px;
+  box-shadow: none;
+  font-weight: 500;
+}
+.secondary {
+  background: white;
+  color: #39434c;
+  border: 1px solid #e3e7eb;
+  border-radius: 8px;
+  min-height: 40px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.primary:hover {
+  background: #30383f;
+}
+.secondary:hover {
+  background: #f5f7f9;
+}
+.root summary:focus-visible,
+.root button:focus-visible {
+  outline: 2px solid #59656f;
+  outline-offset: 3px;
+}
+@media (min-width: 1400px) {
+  .form[data-variants] {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 0.8fr);
+    gap: 24px;
+  }
+  .form[data-variants] > :global(.contents) > section {
+    grid-column: 1;
+  }
+  .form[data-variants] aside {
+    grid-column: 2;
+    grid-row: span 4;
+  }
+  .form[data-variants] > :global(.xl\:col-start-1) {
+    grid-column: 1;
+  }
+}
+@media (max-width: 639px) {
+  .body {
+    padding: 16px;
+  }
+  .fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .fields > * {
+    grid-column: 1 !important;
+  }
+  .actions {
+    margin: 0 -16px -16px;
+    padding: 12px 16px;
+  }
+  .actionButtons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .actionButtons > :last-child {
+    grid-column: 1 / -1;
+  }
+  .modeToggle {
+    padding: 14px;
+  }
+  .importPanel summary {
+    padding: 16px;
+  }
+}

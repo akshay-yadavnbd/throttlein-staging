@@ -1,0 +1,293 @@
+/* ══════════════════════════════════════════════════════════════════════
+   THROTTLEIN "nude" theme — HeroUI v3
+   ══════════════════════════════════════════════════════════════════════
+
+   Replaces the dark chrome (#141414 sidebar, 17 copy-pasted dark page
+   heroes, 5 full-viewport dark auth screens) with a warm neutral palette.
+
+   ── WHY THIS FILE, AND NOT tailwind.config.mts ──────────────────────
+   HeroUI v2 themed through a Tailwind plugin and a JS object, and it only
+   let us override `primary`. That is precisely why the codebase hand-rolls
+   emerald/amber/rose tints in ~21 places: `success`/`warning`/`danger`
+   were never themeable. v3 themes through CSS variables, so all four
+   semantic colours are first-class here and those hand-rolled maps can be
+   deleted as each tab is migrated.
+
+   ── ON THE COLOUR VALUES ────────────────────────────────────────────
+   Authored in sRGB hex, converted to OKLCH, and the conversion was
+   round-tripped back to hex to confirm it is lossless. The hex is kept in
+   a trailing comment on every line — it is the reviewable form, and it is
+   what the contrast figures below refer to.
+
+   Contrast was MEASURED, not assumed, and the first draft failed twice:
+
+     - muted text started at #7A6F66 → 4.06:1 on the nav surface. Fails
+       WCAG AA for normal text. Darkened to #6B6058 (5.06:1 worst case).
+     - the control border started at #D6CCC0 → 1.58:1 against white.
+       Fails WCAG 2.1 SC 1.4.11, which requires >= 3.0 for the boundary of
+       a form control. Darkened to #9C8F7E (3.16:1).
+
+   Verified ratios (normal text needs 4.5 AA / 7.0 AAA):
+
+     foreground     on background  13.94  AAA
+     foreground     on surface     15.28  AAA
+     secondary text on background   6.85  AA
+     muted text     on nav          5.06  AA   <- worst case of the four surfaces
+     accent-fg      on accent      12.45  AAA
+     success/warning/danger/info on their own soft tints: 5.55–6.31, all AA
+
+   ── WHAT IS DELIBERATELY NOT SET ────────────────────────────────────
+   `--radius` stays at HeroUI's default and is not inflated: the audit
+   found 23 different card recipes largely because radius was being set
+   per-component. One value, inherited everywhere.
+   ══════════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  [data-theme='nude'] {
+    color-scheme: light;
+
+    /* ── Primitives (identical in every theme) ─────────────────── */
+    --white: oklch(100% 0 0);
+    --black: oklch(0% 0 0);
+
+    /* ── Layout ────────────────────────────────────────────────── */
+    --spacing: 0.25rem;              /* 4px base — the whole scale derives */
+    --border-width: 1px;
+    --field-border-width: 1px;       /* v3 default is 0; we want visible
+                                        control boundaries for 1.4.11 */
+    --disabled-opacity: 0.5;
+    --ring-offset-width: 2px;
+    --cursor-interactive: pointer;
+    --cursor-disabled: not-allowed;
+
+    /* ── Radius ────────────────────────────────────────────────── */
+    --radius: 0.5rem;                /* lg = 8px controls, 2xl = 16px cards */
+    --field-radius: calc(var(--radius) * 1);
+
+    /* ── Base surfaces ─────────────────────────────────────────── */
+    /* Per product decision the body is plain WHITE — the earlier warm
+       #F7F4F0 made cards blend into the page. Cards keep their borders
+       and shadow for separation. */
+    --background: var(--white);                          /* #FFFFFF */
+    /* Deepened from #2A2422 per product decision ("too faded") — a
+       darker, warmer espresso ink. 16.85:1 on white, 14.79:1 on cream. */
+    --foreground: oklch(23.17% 0.0133 61.90);            /* #221C17 */
+
+    /* Non-overlay components: cards, tables, panels. */
+    --surface: oklch(100% 0 0);                          /* #FFFFFF */
+    --surface-foreground: var(--foreground);
+
+    /* Wells and table headers — was `bg-default-50` hardcoded 7×. */
+    --surface-secondary: oklch(94.53% 0.0097 72.66);     /* #F1ECE6 */
+    --surface-secondary-foreground: var(--foreground);
+
+    /* Nav / sidebar. THIS is the dark-theme removal: the sidebar was
+       #141414 with cream text; it is now a light warm neutral carrying
+       dark text at 12.67:1. */
+    --surface-tertiary: oklch(95.47% 0.0095 119.58);     /* #EFF1EA — the
+       existing brand cream, per product decision, so the relit sidebar
+       matches the wordmark's historical backdrop. 13.42:1 with foreground. */
+    --surface-tertiary-foreground: var(--foreground);
+
+    /* Floating: modals, popovers, dropdowns, toasts. */
+    --overlay: oklch(100% 0 0);                          /* #FFFFFF */
+    --overlay-foreground: var(--foreground);
+
+    /* ── Text ──────────────────────────────────────────────────── */
+    --muted: oklch(49.70% 0.0189 58.34);                 /* #6B6058, 5.06 worst case */
+
+    /* ── Accent — primary actions ──────────────────────────────── */
+    /* Deep warm espresso. Deepened from #3D3229 per product decision
+       ("too faded") to match the new dark chrome family; 14.21:1 on
+       white — AAA with room to spare. */
+    --accent: oklch(28.91% 0.0229 66.71);                /* #33291F */
+    --accent-foreground: var(--white);
+
+    /* ── Neutral fills (secondary buttons, inert chips) ────────── */
+    --default: oklch(94.53% 0.0097 72.66);               /* #F1ECE6 */
+    --default-foreground: var(--foreground);
+
+    /* ── Form fields ───────────────────────────────────────────── */
+    /* Replaces the five competing input skins the audit found (AdminInput's
+       #e0e0e0 border-2, FormField's 52px pill, ProductForm's local
+       INPUT_PROPS, SELECT_CLASS, and raw HeroUI bordered). */
+    --field-background: var(--white);
+    --field-foreground: var(--foreground);
+    --field-placeholder: var(--muted);
+    --field-border: oklch(65.67% 0.0290 74.61);          /* #9C8F7E, 3.16 vs white */
+
+    /* ── Semantic status ───────────────────────────────────────── */
+    /* VIBRANT, not muted.
+     *
+     * The first pass used desaturated sage / ochre / brick (chroma
+     * 0.064–0.104) on the theory that a nude palette wants quiet
+     * semantics. In practice status chips are the thing you scan a table
+     * for — "Pending" vs "Approved" has to register in peripheral vision —
+     * and at that chroma they read as grey-brown mush. Chroma is now
+     * roughly doubled while lightness is held, so contrast is unchanged
+     * in kind and every value still clears AA for normal text on white:
+     *
+     *   success  #15803D  5.02:1   (was #41603F, chroma 0.064 -> 0.137)
+     *   warning  #B45309  5.02:1   (was #7A5A28, chroma 0.079 -> 0.146)
+     *   danger   #C2261C  5.85:1   (was #8A3F38, chroma 0.104 -> 0.193)
+     *
+     * UX audit T2 (25 Sep 2026): those figures were measured on WHITE.
+     * A status chip never sits on white — it sits on its own ~15% tint,
+     * usually over --surface-secondary (#F1ECE6) inside a card. Measured
+     * on the rendered admin orders / sellers lists the chips came out at
+     * 4.1–4.3:1, under AA. Lightness is lowered ~7 points (hue and chroma
+     * unchanged) so the worst realistic case — 15% self-tint over the
+     * cream surface — clears 4.6:1, and plain white reads 6.8–7.0:1:
+     *
+     *   success  #006A28  4.61 worst / 6.76 on white
+     *   warning  #9D3E00  4.60 worst / 6.75 on white
+     *   danger   #B30F09  4.61 worst / 7.03 on white
+     *   info     #006094  4.64 worst / 6.81 on white
+     *
+     * Note HeroUI derives the `*-soft` chip background and
+     * `*-soft-foreground` text from these via color-mix(), so a change
+     * here moves every chip in both apps at once.
+     *
+     * `data-vibrant-palette="true"` was NOT used to achieve this: it
+     * switches soft foregrounds to 92% of the raw colour, and HeroUI's own
+     * docs warn it "may not meet WCAG accessibility guidelines". Raising
+     * the token is the same visual goal with the contrast still verifiable.
+     */
+    --success: oklch(45.48% 0.1371 150.07);              /* #006A28 */
+    --success-foreground: var(--white);
+
+    --warning: oklch(48.53% 0.1455 49.00);               /* #9D3E00 */
+    --warning-foreground: var(--white);
+
+    --danger: oklch(48.62% 0.1927 29.17);                /* #B30F09 */
+    --danger-foreground: var(--white);
+
+    /* ── Lines ─────────────────────────────────────────────────── */
+    /* One border token. The audit found `border-default-200` (76 uses) and
+       `border-default-200/70` (19) used interchangeably with no rule. */
+    --border: oklch(90.36% 0.0144 74.42);                /* #E5DED5 */
+    --separator: oklch(90.36% 0.0144 74.42);
+
+    /* Focus ring = accent. `focus-visible` appeared ONCE in 25k lines of
+       admin UI and zero times in 13.4k of seller UI; centralising it here
+       means every v3 component gets a visible ring for free. */
+    --focus: var(--accent);
+    --link: var(--accent);
+
+    --segment: var(--white);
+    --segment-foreground: var(--foreground);
+
+    /* ── Elevation ─────────────────────────────────────────────── */
+    /* Two shadows total: raised and floating. Warm-tinted rather than
+       neutral black so they sit correctly on the nude background. */
+    --surface-shadow:
+      0 1px 2px 0 rgba(61, 50, 41, 0.04),
+      0 1px 3px 0 rgba(61, 50, 41, 0.06);
+    --overlay-shadow:
+      0 4px 16px 0 rgba(42, 36, 34, 0.08),
+      0 8px 24px 0 rgba(42, 36, 34, 0.09);
+    --field-shadow: none;
+
+    /* ── Scrollbars ────────────────────────────────────────────── */
+    --scrollbar-thumb: color-mix(in oklch, var(--foreground) 18%, transparent);
+    --scrollbar-track: transparent;
+    --scrollbar-width: thin;
+
+    --skeleton-animation: shimmer;
+    --tooltip-delay: 600ms;
+    --tooltip-close-delay: 300ms;
+  }
+}
+
+/* ── Custom semantic: info ──────────────────────────────────────────
+   Not one of HeroUI's four. Added because the audit found `blue-*` tints
+   used for informational panels in both apps with no token behind them. */
+@layer base {
+  [data-theme='nude'] {
+    --info: oklch(46.84% 0.1136 243.20);                 /* #006094, 4.64 worst / 6.81 on white */
+    --info-foreground: var(--white);
+
+    /* ── Chart series ────────────────────────────────────────────
+     * A dedicated categorical palette, separate from the semantic
+     * tokens.
+     *
+     * Why separate: the dashboard chart initially drew its bars in
+     * `--accent` (#3D3229, the deep brown used for buttons) and its
+     * revenue line in `--success`. Two problems. Visually, a brown bar on
+     * a warm neutral surface has almost no figure/ground separation — the
+     * chart read as a smudge. Semantically, reusing `--success` for
+     * "revenue" implies revenue is a *good* status, so a future red
+     * series would imply the opposite; series colour should be
+     * categorical, carrying no meaning beyond "this is a different
+     * series".
+     *
+     * Every value clears 3.0:1 against the white surface, which is what
+     * WCAG 2.1 SC 1.4.11 requires of a non-text graphical object you have
+     * to be able to perceive:
+     *
+     *   chart-1 blue    #2563EB  5.17:1
+     *   chart-2 green   #16A34A  3.30:1
+     *   chart-3 orange  #EA580C  3.56:1
+     *   chart-4 violet  #7C3AED  5.70:1
+     *
+     * Ordered so the first two — the pair used most often together on the
+     * revenue/orders chart — are also distinguishable under the common
+     * red-green deficiencies, since they differ in lightness as well as
+     * hue. Charts should still carry a legend rather than relying on
+     * colour alone.
+     */
+    --chart-1: oklch(54.61% 0.2152 262.88);              /* #2563EB */
+    --chart-2: oklch(62.71% 0.1699 149.21);              /* #16A34A */
+    --chart-3: oklch(64.61% 0.1943 41.12);               /* #EA580C */
+    --chart-4: oklch(54.13% 0.2466 293.01);              /* #7C3AED */
+  }
+}
+
+@theme inline {
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+}
+
+/* ── Skeleton: reduced motion ───────────────────────────────────────
+ * HeroUI v3 already ships `.skeleton--shimmer` (a sweeping highlight on
+ * ::after, driven by its own `skeleton` keyframes) in its `components`
+ * layer, so the shared TableSkeleton/CardGridSkeleton do animate. What it
+ * does not ship is a reduced-motion guard, and a highlight travelling
+ * across the screen on a loop is exactly the repetitive motion WCAG 2.3.3
+ * is about — worse on a skeleton, which can sit on screen for a while.
+ *
+ * This is the only skeleton rule we need to add: the sweep is cancelled
+ * and replaced with a gentle opacity pulse on the block itself, which
+ * still reads as "working" without anything moving. Everything else is
+ * left to HeroUI.
+ *
+ * Note on layers: nude.css is imported with `layer(theme)`, and `theme`
+ * is ordered BEFORE `components`, so a normal declaration here could not
+ * override HeroUI's. It doesn't have to — HeroUI has no reduced-motion
+ * rule for this class at all, so these apply unopposed. Anything added
+ * here that HeroUI also sets would silently lose; put such overrides in
+ * globals.css instead.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton--shimmer::after {
+    animation: none;
+    transform: none;
+    background: none;
+  }
+  .skeleton--shimmer {
+    animation: skeleton-fade 2s ease-in-out infinite;
+  }
+  @keyframes skeleton-fade {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.65;
+    }
+  }
+}

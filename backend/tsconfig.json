@@ -1,0 +1,18 @@
+{
+  // Type-checking for the backend's JavaScript (step 9, stage 1 — docs/backend-conventions.md "Type checking"). `tsc` checks, never emits:
+  // the runtime, Dockerfile and pm2 setup are unchanged. Run with `npm run typecheck`.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"]
+  },
+  "include": ["src/**/*.js", "src/types/*.d.ts"]
+}

@@ -1,0 +1,54 @@
+{
+  "name": "seller-management-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "//engines": "Floor set by isomorphic-dompurify@4 -> jsdom@30, which need ^22.22.2 || ^24.15.0 || >=26. Node 20 installs with only an EBADENGINE warning, then fails at static prerender with 'webidl.util.markAsUncloneable is not a function'. Keep frontend/Dockerfile's three FROM lines in step with this.",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "eslint .",
+    "check:theme": "node ../scripts/check-theme-sync.js"
+  },
+  "dependencies": {
+    "@heroui-v3/react": "npm:@heroui/react@^3.2.3",
+    "@heroui-v3/styles": "npm:@heroui/styles@^3.2.3",
+    "@heroui/react": "^2.8.10",
+    "@tiptap/extension-image": "^3.31.3",
+    "@tiptap/extension-table": "^3.31.3",
+    "@tiptap/extension-text-align": "^3.31.3",
+    "@tiptap/extensions": "^3.31.3",
+    "@tiptap/pm": "^3.31.3",
+    "@tiptap/react": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
+    "axios": "^1.18.1",
+    "dompurify": "^3.4.17",
+    "framer-motion": "^12.42.2",
+    "html-to-image": "^1.11.13",
+    "isomorphic-dompurify": "^4.3.0",
+    "next": "^16.4.3",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-hot-toast": "^2.6.0",
+    "recharts": "^3.9.2",
+    "swiper": "^14.0.5"
+  },
+  "overrides": {
+    "@react-aria/i18n": "^3.13.1",
+    "@react-aria/ssr": "^3.10.1",
+    "@react-aria/utils": "^3.34.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.2",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.3",
+    "tailwindcss": "^4.3.2",
+    "typescript": "^5.9.3"
+  }
+}

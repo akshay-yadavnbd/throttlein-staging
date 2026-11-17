@@ -1,0 +1,114 @@
+/* Workspace lists (Orders, Shipping errors, Sellers, …) — the seller orders list look
+   (frontend/components/pages/DashboardOrders.module.css) in the admin
+   workspace: one white panel holding header, status tabs, toolbar, table. */
+.page { --foreground:#252c32; --muted:#74808a; color:var(--foreground); max-width:1440px; margin:0 auto; }
+.page a:focus-visible,.page button:focus-visible,.page input:focus-visible { outline:2px solid #617d26; outline-offset:3px; }
+
+.workspace { container:list / inline-size; background:white; border:1px solid #e3e7eb; border-radius:12px; overflow:hidden; }
+.listHeader { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:22px 22px 18px; flex-wrap:wrap; }
+/* The title block shares the row with the actions instead of pushing them under it. */
+.listHeader > div:first-child { flex:1 1 360px; min-width:0; }
+.listHeader h2 { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; }
+.count { padding:2px 6px; background:#f0f3f5; border-radius:5px; font-size:10px; color:#74808a; font-weight:500; font-variant-numeric:tabular-nums; }
+.listHeader p { margin-top:5px; max-width:720px; color:#74808a; font-size:12px; line-height:1.6; }
+.headerActions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.labelled { display:flex; align-items:center; gap:10px; color:#74808a; font-size:11px; white-space:nowrap; }
+
+.stageFilters { display:flex; gap:22px; padding:0 22px; border-bottom:1px solid #e6e9ed; overflow-x:auto; scrollbar-width:none; }
+.stageFilters::-webkit-scrollbar { display:none; }
+.stageFilters > button { display:flex; align-items:center; gap:7px; padding:10px 0 14px; border-bottom:2px solid transparent; white-space:nowrap; color:#7c8790; font-size:12px; cursor:pointer; }
+.stageFilters > button:hover { color:#303942; }
+.stageFilters > button[aria-pressed='true'] { color:#303942; font-weight:600; border-bottom-color:#252c32; }
+.stageFilters > button > span { padding:1px 5px; background:#f0f2f4; border-radius:4px; color:#7d8892; font-size:10px; font-weight:400; font-variant-numeric:tabular-nums; }
+.stageFilters > button[aria-pressed='true'] > span { background:#eaf1df; color:#5c7731; }
+
+.toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px 16px; padding:16px 22px; flex-wrap:wrap; }
+.toolbarLeft { display:flex; align-items:center; gap:10px; flex-wrap:wrap; flex:1; min-width:0; }
+.search { display:flex; align-items:center; gap:10px; width:min(380px,100%); height:38px; padding:0 12px; border:1px solid #e2e7eb; border-radius:8px; color:#87919a; background:#fff; }
+.search:focus-within { border-color:#59656f; }
+.search input { width:100%; min-width:0; background:transparent; outline:none!important; border:0!important; color:#303942; font-size:12px; }
+.search input::placeholder { color:#929ba3; }
+/* The list pages draw their own clear button (.clearSearch); hide WebKit's
+   native one inside type="search" inputs so the field shows a single ✕. */
+.search input::-webkit-search-cancel-button,
+.search input::-webkit-search-decoration { -webkit-appearance:none; appearance:none; display:none; }
+.search svg { width:16px; height:16px; flex:none; }
+.clearSearch { display:grid; place-items:center; width:22px; height:22px; border-radius:5px; color:#8a939b; cursor:pointer; flex:none; }
+.clearSearch:hover { background:#f0f2f4; color:#303942; }
+.results { display:flex; align-items:center; gap:14px; color:#7b858e; font-size:11px; white-space:nowrap; }
+.updating { color:#8a939b; }
+.clearFilters { display:inline-flex; align-items:center; gap:6px; color:#38434c; font-size:11px; cursor:pointer; }
+.clearFilters:hover { text-decoration:underline; text-underline-offset:3px; }
+
+.tableWrap { overflow-x:auto; transition:opacity .15s; }
+.stale { opacity:.55; }
+.table { width:100%; min-width:900px; border-collapse:collapse; text-align:left; }
+.table thead th { padding:11px 16px; background:#fafbfc; border-block:1px solid #edf0f2; color:#7d8892; font-size:11px; font-weight:500; white-space:nowrap; }
+.table thead th:first-child,.table tbody td:first-child { padding-left:22px; }
+.table thead th:last-child,.table tbody td:last-child { padding-right:22px; }
+.table tbody td { padding:16px; border-bottom:1px solid #eef1f3; vertical-align:middle; font-size:12px; }
+.table tbody tr:last-child td { border-bottom:0; }
+.table tbody tr { cursor:pointer; }
+.table tbody tr:hover { background:#fcfdf9; }
+.primary { font-size:12px; font-weight:600; color:#2c363e; }
+a.primary:hover { text-decoration:underline; text-underline-offset:3px; }
+.sub { display:block; margin-top:3px; font-size:11px; color:#8a939b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:220px; }
+.money { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.money strong { font-size:13px; font-weight:600; }
+.chips { display:flex; flex-wrap:wrap; gap:4px; max-width:220px; }
+.chip { padding:2px 8px; border-radius:999px; background:#f0f2f4; color:#46525c; font-size:11px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px; }
+a.chip:hover { background:#e4e8ec; color:#252c32; }
+.dangerChip { background:#fdeeed; color:#a3413b; }
+a.dangerChip:hover { background:#fadad7; color:#8d332e; }
+.more { font-size:11px; color:#8a939b; padding:2px 2px; }
+.reason { max-width:320px; color:#46525c; line-height:1.55; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.openLink { display:grid; place-items:center; width:32px; height:32px; margin-left:auto; border:1px solid #e3e7eb; border-radius:8px; background:white; color:#74808a; transition:background .15s,color .15s,border-color .15s; }
+.openLink svg { width:15px; height:15px; transition:transform .15s; }
+.table tbody tr:hover .openLink { border-color:#c9d1d8; color:#303942; }
+.table tbody tr:hover .openLink svg { transform:translateX(2px); }
+.openLink:hover,.table tbody tr:hover .openLink:hover { background:#191d21; border-color:#191d21; color:white; }
+
+.cards { display:none; }
+.card { display:block; padding:16px 22px; border-top:1px solid #edf0f2; }
+.card:hover { background:#fcfdf9; }
+.cardTop { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.cardGrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+.cardGrid dt { font-size:10px; color:#87919a; margin-bottom:4px; }
+.cardGrid dd { font-size:12px; min-width:0; }
+
+.footer { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; padding:12px 22px; border-top:1px solid #e9edf0; font-size:11px; color:#7b858e; }
+.pager { display:flex; align-items:center; gap:8px; }
+.pager button { display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:6px 12px; border:1px solid #e3e7eb; border-radius:7px; background:white; color:#303942; font-size:12px; cursor:pointer; }
+.pager button:hover:not(:disabled) { background:#f6f7f9; }
+.pager button:disabled { opacity:.45; cursor:default; }
+.pager svg { width:14px; height:14px; }
+
+.state { display:flex; flex-direction:column; align-items:center; gap:7px; padding:44px 20px 48px; text-align:center; border-top:1px solid #edf0f2; }
+.state h3 { font-size:13px; font-weight:600; }
+.state p { max-width:360px; font-size:11px; line-height:1.7; color:#74808a; }
+.stateIcon { display:grid; place-items:center; width:42px; height:42px; border-radius:12px; background:#f1f5e9; color:#829c51; margin-bottom:4px; }
+.stateIcon svg { width:19px; height:19px; }
+.errorIcon { background:#fdf4e3; color:#a67631; }
+.stateAction { margin-top:6px; padding:8px 14px; border-radius:7px; background:#191d21; color:white; font-size:12px; font-weight:600; cursor:pointer; }
+.stateAction:hover { background:#30383f; }
+.stateLink { margin-top:4px; font-size:11px; font-weight:600; color:#536d23; cursor:pointer; }
+.skeleton { padding:6px 22px 22px; display:flex; flex-direction:column; gap:10px; border-top:1px solid #edf0f2; animation:pulse 1.5s ease-in-out infinite; }
+.skeleton span { display:block; height:46px; border-radius:7px; background:#f0f2f4; }
+@keyframes pulse { 50% { opacity:.55; } }
+
+/* Narrow panel (laptop windows, tablets, phones): rows become cards. */
+@container list (max-width: 900px) {
+  .listHeader { padding:18px 16px 14px; }
+  .stageFilters { padding-inline:16px; gap:18px; }
+  .toolbar { padding:14px 16px; }
+  .search { width:100%; }
+  .tableWrap { display:none; }
+  .cards { display:block; }
+  .card { padding:16px; }
+  .footer { padding-inline:16px; }
+}
+/* Phone-width panel: the search gets the whole row, the result count drops under it. */
+@container list (max-width: 520px) {
+  .toolbarLeft { flex-basis:100%; }
+}
+@media(prefers-reduced-motion:reduce) { .openLink,.openLink svg,.tableWrap,.skeleton { transition:none; animation:none; } .table tbody tr:hover .openLink svg { transform:none; } }

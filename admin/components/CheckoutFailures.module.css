@@ -1,0 +1,82 @@
+/* Checkout & payment failures — workspace panel style (matches the dashboard
+   panels in app/dashboard/dashboard.module.css). */
+.panel { container:failures / inline-size; margin-bottom:24px; background:white; border:1px solid #e3e7eb; border-radius:12px; min-width:0; overflow:hidden; color:#252c32; }
+.header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; padding:22px 22px 14px; }
+.header h2 { font-size:14px; font-weight:600; }
+.header p { margin-top:5px; color:#74808a; font-size:12px; line-height:1.6; }
+.actions { display:flex; align-items:center; gap:8px; flex:none; }
+.viewAll { font-size:11px; font-weight:500; white-space:nowrap; padding:6px 4px; color:#53632d; }
+.viewAll:hover { text-decoration:underline; }
+.iconButton { display:grid; place-items:center; width:32px; height:32px; border:1px solid #e3e7eb; border-radius:7px; background:white; color:#5e6a73; cursor:pointer; transition:background .15s,color .15s; }
+.iconButton:hover:not(:disabled) { background:#f6f7f9; color:#252c32; }
+.iconButton:disabled { cursor:default; opacity:.6; }
+.iconButton svg { width:15px; height:15px; }
+.spinning svg { animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:0 22px 14px; }
+.legend { display:flex; flex-wrap:wrap; gap:12px; font-size:10px; color:#7b858e; }
+.legend span { display:inline-flex; align-items:center; gap:6px; }
+.legend i { width:6px; height:6px; border-radius:50%; }
+
+.table { width:100%; border-collapse:collapse; text-align:left; }
+.table th { padding:11px 22px; color:#88919a; font-size:10px; font-weight:500; background:#fafbfc; border-top:1px solid #edf0f2; border-bottom:1px solid #edf0f2; white-space:nowrap; }
+.table td { padding:14px 22px; font-size:12px; border-bottom:1px solid #f0f2f4; vertical-align:top; }
+.table tr:last-child td { border-bottom:0; }
+.table tbody tr:hover { background:#fcfdf9; }
+.when strong { display:block; font-weight:600; color:#303942; font-variant-numeric:tabular-nums; }
+.muted { display:block; margin-top:3px; font-size:11px; color:#8a939b; overflow-wrap:anywhere; }
+.customer { font-weight:500; color:#303942; }
+.step { display:inline-flex; align-items:center; gap:6px; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:500; white-space:nowrap; }
+.step i { width:6px; height:6px; border-radius:50%; flex:none; }
+.neutral { background:#f0f2f4; color:#55616b; } .neutral i,.legend .neutralDot { background:#9aa3ab; }
+.warning { background:#fdf4e3; color:#8a5a12; } .warning i,.legend .warningDot { background:#dfa746; }
+.danger { background:#fdeeed; color:#a3413b; } .danger i,.legend .dangerDot { background:#d97973; }
+.message { color:#46525c; line-height:1.55; overflow-wrap:break-word; min-width:200px; max-width:420px; }
+.table td:first-child { width:120px; }
+.table td:nth-child(2) { width:190px; }
+.table td:nth-child(3) { width:220px; }
+.table td:last-child { width:250px; }
+.table td:nth-child(2) .muted { overflow-wrap:break-word; }
+.refs { display:flex; flex-direction:column; gap:4px; }
+.ref { display:inline-flex; align-items:center; gap:6px; max-width:100%; }
+.ref span:first-child { font-size:10px; color:#8a939b; flex:none; }
+.ref code { min-width:0; max-width:170px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; color:#39434c; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.copy { display:grid; place-items:center; width:22px; height:22px; flex:none; border-radius:5px; color:#8a939b; cursor:pointer; }
+.copy:hover { background:#f0f2f4; color:#303942; }
+.copy svg { width:12px; height:12px; }
+
+.cards { display:none; }
+.empty,.error { display:flex; flex-direction:column; align-items:center; gap:6px; padding:30px 20px 34px; text-align:center; border-top:1px solid #edf0f2; }
+.empty h3,.error h3 { font-size:13px; font-weight:600; }
+.empty p,.error p { max-width:360px; font-size:11px; line-height:1.7; color:#74808a; }
+.emptyIcon { display:grid; place-items:center; width:40px; height:40px; border-radius:12px; background:#f1f5e9; color:#829c51; margin-bottom:4px; }
+.emptyIcon svg { width:18px; height:18px; }
+.error button { margin-top:6px; padding:7px 14px; border-radius:7px; background:#191d21; color:white; font-size:12px; font-weight:600; cursor:pointer; }
+.loading { padding:0 22px 20px; display:flex; flex-direction:column; gap:10px; animation:pulse 1.5s ease-in-out infinite; }
+.loading span { display:block; height:38px; border-radius:7px; background:#f0f2f4; }
+@keyframes pulse { 50% { opacity:.55; } }
+.footer { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding:12px 22px; border-top:1px solid #edf0f2; font-size:11px; color:#74808a; }
+.pager { display:flex; align-items:center; gap:8px; }
+.pager button { min-height:32px; padding:6px 12px; border:1px solid #e3e7eb; border-radius:7px; background:white; color:#303942; font-size:12px; cursor:pointer; }
+.pager button:hover:not(:disabled) { background:#f6f7f9; }
+.pager button:disabled { opacity:.45; cursor:default; }
+.panel a:focus-visible,.panel button:focus-visible { outline:2px solid #61840f; outline-offset:2px; }
+
+/* Cards whenever the PANEL is narrow (dashboard column, tablets, phones) —
+   the viewport alone says nothing about the space this table gets. */
+@container failures (max-width: 860px) {
+  .header { flex-wrap:wrap; padding:18px 16px 12px; }
+  .toolbar { padding-inline:16px; }
+  .tableScroll { display:none; }
+  .cards { display:block; border-top:1px solid #edf0f2; }
+  .card { display:flex; flex-direction:column; gap:8px; padding:14px 16px; border-bottom:1px solid #f0f2f4; font-size:12px; }
+  .card:last-child { border-bottom:0; }
+  .cardTop { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .footer { padding-inline:16px; }
+}
+@media(prefers-reduced-motion:reduce) { .spinning svg,.loading { animation:none; } }
+
+.viewAll { display:inline-flex; align-items:center; gap:4px; }
+.linkArrow { width:14px; height:14px; flex:none; transition:transform .15s; }
+.viewAll:hover .linkArrow { transform:translateX(2px); }
+@media(prefers-reduced-motion:reduce) { .linkArrow { transition:none; } .viewAll:hover .linkArrow { transform:none; } }

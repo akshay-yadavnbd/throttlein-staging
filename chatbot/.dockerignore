@@ -1,0 +1,17 @@
+# Rebuilt inside the image from a clean `npm ci`.
+node_modules
+
+# Secrets never go into the image; compose passes chatbot.env at runtime.
+.env
+.env.*
+!.env.example
+*.log
+
+# Not needed at runtime.
+test
+README.md
+.git
+.gitignore
+.DS_Store
+Dockerfile
+.dockerignore

@@ -1,0 +1,19 @@
+{
+  // The runtime build (step 9, stage 2): `npm run build` compiles src/ into dist/, which the
+  // container runs. .js and .ts files sit side by side while modules convert one at a time;
+  // .js files are emitted as they are. dist/ has the same depth as src/, so every
+  // __dirname-relative path (uploads, assets, private files) resolves the same.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": "src",
+    "noEmitOnError": true,
+    // Emit .js files with the strictness they were written in: no "use strict" is
+    // added to a file that does not have it (a .ts file with import/export is strict).
+    "alwaysStrict": false,
+    "moduleDetection": "auto",
+    "sourceMap": true
+  },
+  "include": ["src/**/*.js", "src/**/*.ts"]
+}

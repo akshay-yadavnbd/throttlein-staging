@@ -1,0 +1,564 @@
+/* Layer order must be declared BEFORE the imports so `layer(theme)` below
+   lands where HeroUI v3 expects it. */
+@layer theme, base, components, utilities;
+
+@import "tailwindcss";
+
+/* ── HeroUI v3 (coexisting with v2 during the migration) ─────────────
+   Order is load-bearing: `tailwindcss` first, then v3 styles. Package is
+   aliased (`@heroui-v3/*` → `@heroui/*@3`) because v2 still occupies
+   `@heroui/react`. See admin/app/globals.css for the fuller note.
+
+   IMPORTANT, and different from the admin app: this app serves the PUBLIC
+   storefront and the seller property as well as the seller dashboard. The
+   nude theme is therefore NOT applied at <html> here — it is scoped to the
+   dashboard subtree in app/dashboard/layout.tsx. Defining the tokens is
+   inert until something opts in via `data-theme="nude"`. */
+@import "@heroui-v3/styles";
+
+/* THROTTLEIN nude theme — v3 CSS variables, opt-in per subtree.
+   Must stay byte-identical to admin/app/themes/nude.css;
+   `npm run check:theme` enforces that. */
+@import "./themes/nude.css" layer(theme);
+
+/* Load the JS theme config (custom brand colors + heroui plugin) */
+/* `.mts`, not `.ts`, and deliberately so. Tailwind v4 loads this config
+   through Node, which cannot infer the module type of a `.ts` file when
+   package.json has no "type" field — it reparses as ESM and prints
+   MODULE_TYPELESS_PACKAGE_JSON on every build. The `.mts` extension is
+   unambiguously ESM, so the guess (and the warning) goes away.
+
+   Node's own suggested fix, adding "type": "module" to package.json, would
+   break the build: next.config.js, postcss.config.js and
+   lib/legacyRedirects.js are all CommonJS. */
+@config "../tailwind.config.mts";
+
+/* Tell Tailwind to scan HeroUI's compiled component classes */
+@source "../node_modules/@heroui/theme/dist";
+
+/* Enable class-based dark mode (Tailwind v4 syntax) */
+@custom-variant dark (&:is(.dark, .dark *));
+
+:root {
+  --brand-lime: #BDFF00;
+  --brand-black: #141414;
+  --brand-cream: #EFF1EA;
+  --brand-white: #FFFFFF;
+}
+
+html,
+body {
+  /* Use min-height (not height) so the page can grow past the viewport
+     when content is taller than 100vh. Combining `height: 100%` here
+     with `min-h-screen` in layout.tsx clashed — long pages ended up with
+     the footer at 100vh and a blank patch below it because the body's
+     height stayed pinned at the viewport while flex children spilled
+     out. min-height lets both the sticky-footer pattern AND long pages
+     work correctly. */
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-inter), "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--brand-cream);
+  color: var(--brand-black);
+}
+
+/* ─── Cap maximum font weight at 600 across the storefront ─────────────────
+   Tailwind ships font-bold (700), font-extrabold (800) and font-black (900).
+   Project rule: nothing heavier than 600. These overrides clamp Tailwind's
+   defaults and any direct `font-weight: 700/800/900` declarations. */
+.font-bold,
+.font-extrabold,
+.font-black {
+  font-weight: 600 !important;
+}
+
+[style*="font-weight: 700"],
+[style*="font-weight: 800"],
+[style*="font-weight: 900"],
+[style*="font-weight:700"],
+[style*="font-weight:800"],
+[style*="font-weight:900"] {
+  font-weight: 600 !important;
+}
+
+/* ─── …but NOT inside the nude-themed dashboard ──────────────────────────
+ * The clamp above makes `font-semibold`, `font-bold` and `font-extrabold`
+ * render identically, so the dashboard's heading hierarchy was a fiction —
+ * ~11 headings varying their weight class to no visual effect.
+ *
+ * The admin app deletes the clamp outright, because every page there is a
+ * dashboard. This app can't: it also serves the PUBLIC storefront, whose
+ * Figma-built pages were designed against the clamp. Removing it globally
+ * would restyle public pages nobody asked me to touch.
+ *
+ * So the clamp stays for the storefront and is lifted only inside
+ * `[data-theme="nude"]` — the dashboard subtree. `!important` is required
+ * to beat the `!important` above; specificity alone wouldn't win.
+ *
+ * When the dashboard's own `font-bold` classes have been corrected to the
+ * intended `font-semibold` during the tab-by-tab work, this block can go.
+ */
+[data-theme='nude'] .font-bold {
+  font-weight: 700 !important;
+}
+[data-theme='nude'] .font-extrabold {
+  font-weight: 800 !important;
+}
+[data-theme='nude'] .font-black {
+  font-weight: 900 !important;
+}
+
+/* Brand wordmark — kept editorial without going heavier than 600. */
+.wordmark {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* ─── Restore cursor-pointer on interactive elements ────────────────────────
+   Tailwind v4 dropped the implicit `cursor: pointer` that v3 set on buttons,
+   so native <button> elements now use the default text cursor. Restore the
+   familiar pointer for every actionable element (and ARIA buttons), while
+   leaving disabled ones with `not-allowed` so the affordance still reads
+   as inactive. This propagates to HeroUI's Button (which renders <button>)
+   without per-component tweaks. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+a[role="button"]:not([aria-disabled="true"]),
+summary {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+a[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* ───────────────────────── Rich-text prose ─────────────────────────
+   Plain CSS replacements for the @tailwindcss/typography plugin we
+   don't have installed. Anything inside an element with the `prose`
+   class (typically a rich-text body rendered via dangerouslySetInnerHTML
+   from the TipTap editor) gets proper heading sizes, paragraph
+   spacing, list bullets, and link styling so admin-authored content
+   reads like an actual article instead of one giant blob of body
+   text. Used by the blog detail page, seller guide detail page,
+   prose page, FAQs, etc. */
+.prose {
+  color: #141414;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.prose>*+* {
+  margin-top: 1.25em;
+}
+
+.prose h1 {
+  font-size: 2.25rem;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 2em;
+}
+
+.prose h2 {
+  font-size: 1.75rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-top: 2em;
+  margin-bottom: 0.5em;
+}
+
+.prose h3 {
+  font-size: 1.375rem;
+  line-height: 1.4;
+  font-weight: 600;
+  margin-top: 1.75em;
+  margin-bottom: 0.5em;
+}
+
+.prose h4 {
+  font-size: 1.125rem;
+  line-height: 1.45;
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.prose p {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+.prose strong {
+  font-weight: 600;
+  color: #0a0a0a;
+}
+
+.prose em {
+  font-style: italic;
+}
+
+.prose a {
+  color: #141414;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.prose a:hover {
+  color: #000;
+}
+
+.prose ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin: 1em 0;
+}
+
+.prose ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+  margin: 1em 0;
+}
+
+.prose li {
+  margin: 0.4em 0;
+}
+
+.prose li>p {
+  margin: 0.25em 0;
+}
+
+.prose blockquote {
+  border-left: 4px solid #d4d4d4;
+  padding-left: 1em;
+  font-style: italic;
+  color: #424242;
+  margin: 1.5em 0;
+}
+
+.prose code {
+  background: #f3f4f2;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.prose pre {
+  background: #0a0a0a;
+  color: #f3f4f2;
+  padding: 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 1.5em 0;
+}
+
+.prose pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 1.5em 0;
+}
+
+.prose hr {
+  border: 0;
+  border-top: 1px solid #e0e0e0;
+  margin: 2em 0;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid #e0e0e0;
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+
+.prose th {
+  background: #f3f4f2;
+  font-weight: 600;
+}
+
+.shop-by-mobile {
+  position: sticky;
+  top: 128px;
+}
+
+.container {
+  max-width: 1350px;
+  --bs-gutter-x: 5rem;
+  --bs-gutter-y: 0;
+  width: 100%;
+  padding-right: calc(var(--bs-gutter-x)* 0.5);
+  padding-left: calc(var(--bs-gutter-x)* 0.5);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+@media(width < 991px) {
+  .container {
+    --bs-gutter-x: 2.5rem;
+  }
+}
+
+/* ─── Thin scrollbar (sidebar nav, notification dropdown) ─────────────
+ * Scoped inner scroll areas render the default browser scrollbar as a
+ * full-width grey gutter with arrow buttons — visually a second border
+ * cutting the panel in half. This class gives them a thin, track-less
+ * scrollbar instead: the thumb is a soft dark pill that's always subtly
+ * visible (so scrollability is still discoverable, WCAG 1.4.11-adjacent)
+ * and darkens on hover.
+ * `scrollbar-gutter: stable` reserves the lane so content doesn't shift
+ * when the list grows past the container.
+ */
+.thin-scroll {
+  scrollbar-width: thin;                              /* Firefox */
+  scrollbar-color: rgba(20, 20, 20, 0.18) transparent;
+  scrollbar-gutter: stable;
+}
+.thin-scroll::-webkit-scrollbar {
+  width: 6px;                                         /* Chrome/Edge */
+}
+.thin-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: rgba(20, 20, 20, 0.18);
+  border-radius: 9999px;
+}
+.thin-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(20, 20, 20, 0.32);
+}
+.thin-scroll::-webkit-scrollbar-button {
+  display: none;                                      /* no arrow caps */
+}
+
+/* ─── Hidden scrollbar ─────────────────────────────────────────────────
+ * Scrolls without rendering a scrollbar at all (wheel, trackpad, touch
+ * and keyboard still work). Used by DataTable's fillHeight mode per
+ * product decision: the pagination footer already tells you where you
+ * are in the list, so the bar was pure chrome. Prefer .thin-scroll
+ * anywhere there is no other signal that more content exists.
+ */
+.scrollbar-hidden {
+  scrollbar-width: none;                              /* Firefox */
+  -ms-overflow-style: none;                           /* legacy Edge */
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;                                      /* Chrome/Edge */
+}
+
+/* ─── Tables on brand cream ────────────────────────────────────────────
+ * Per product decision the table chrome (primary-variant container and
+ * its header band) sits on the brand cream — the same #EFF1EA the
+ * sidebar and shell header use — instead of HeroUI's default
+ * `--surface-secondary` beige, so the panel reads as ONE family of
+ * surfaces. Unlayered on purpose: HeroUI's component layer would win
+ * over an override placed in the theme layer.
+ * (`--surface-tertiary` IS the brand cream token in themes/nude.css.)
+ */
+[data-theme='nude'] .table-root--primary,
+[data-theme='nude'] .table-root--primary .table__header {
+  background-color: var(--surface-tertiary);
+}
+
+/* ─── Pagination: dark active page ─────────────────────────────────────
+ * HeroUI's active page link uses `--default` (a pale beige) — invisible
+ * against the cream table footer. Repoint its CSS-variable hooks at the
+ * accent (deep espresso, white numeral, 14.2:1) so the current page
+ * reads like the other primary actions. Unlayered for the same
+ * cascade-layer reason as the table override above.
+ */
+[data-theme='nude'] .pagination__link[data-active='true'] {
+  --pagination-link-bg: var(--accent);
+  --pagination-link-bg-hover: var(--accent);
+  --pagination-link-bg-pressed: var(--accent);
+  --pagination-link-fg: var(--accent-foreground);
+}
+
+/* ─── FilterTabs variants ──────────────────────────────────────────────
+ * HeroUI's Tabs `variant` prop emits no styling hook on this build, so
+ * the two tab looks are pinned here (see components/ui/FilterTabs.tsx):
+ *  - .ft-underline — section tabs: quiet row with a 2px ink underline.
+ *  - .ft-pills     — nested filter tabs: segmented pill track (cream
+ *    rail, white active pill), the HeroUI-docs segmented look.
+ * Unlayered so these beat the component layer.
+ */
+[data-theme='nude'] .ft-underline .tabs__list-container {
+  /* HeroUI paints its beige rail on the CONTAINER — kill it for the
+     underline look (it peeked out past the last tab as a phantom pill). */
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+}
+[data-theme='nude'] .ft-underline .tabs__list {
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  gap: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+[data-theme='nude'] .ft-underline .tabs__tab {
+  padding: 0.4rem 0.125rem;
+}
+[data-theme='nude'] .ft-underline .tabs__indicator {
+  position: absolute;
+  inset: auto 0 -1px 0;
+  top: auto;
+  height: 2px;
+  width: 100%;
+  border-radius: 9999px;
+  background: var(--foreground);
+  box-shadow: none;
+}
+
+[data-theme='nude'] .ft-pills .tabs__list-container {
+  /* The container IS the rail for pills. */
+  width: fit-content;
+  background: var(--surface-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 0.25rem;
+}
+[data-theme='nude'] .ft-pills .tabs__list {
+  background: transparent;
+  padding: 0;
+  gap: 0.25rem;
+}
+[data-theme='nude'] .ft-pills .tabs__indicator {
+  background: var(--surface);
+  border-radius: 9999px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.10);
+}
+
+/* One tab treatment for seller section tabs and list filters. Keep this scoped
+   to the workspace so storefront and admin tab variants are unaffected. */
+#seller-main :is(.ft-underline, .ft-pills) .tabs__list-container {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+#seller-main :is(.ft-underline, .ft-pills) .tabs__list {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  gap: 22px;
+}
+#seller-main .seller-tab-row { column-gap: 22px; }
+#seller-main :is(.ft-underline, .ft-pills) .tabs__tab,
+#seller-main .seller-tab-row > :is(button, a) {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 7px;
+  width: auto;
+  height: auto;
+  min-height: 44px;
+  padding: 10px 0 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #7c8790;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+  white-space: nowrap;
+  opacity: 1;
+}
+#seller-main :is(.ft-underline, .ft-pills) .tabs__tab:hover,
+#seller-main .seller-tab-row > :is(button, a):hover { color: #303942; }
+#seller-main :is(.ft-underline, .ft-pills) .tabs__tab[aria-selected='true'],
+#seller-main .seller-tab-row > [aria-pressed='true'],
+#seller-main .seller-tab-row > [aria-current='page'] {
+  color: #303942;
+  border-bottom-color: #252c32;
+  font-weight: 600;
+}
+#seller-main :is(.ft-underline, .ft-pills) .tabs__indicator { display: none; }
+#seller-main :is(.ft-underline, .ft-pills) .tabs__tab[aria-disabled='true'] {
+  opacity: .45;
+  cursor: not-allowed;
+}
+#seller-main :is(.ft-underline, .ft-pills) .tabs__tab > span:not(.tabs__indicator),
+#seller-main .seller-tab-row > :is(button, a) > span {
+  margin: 0;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #f0f2f4;
+  color: #7d8892;
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+#seller-main :is(.ft-underline, .ft-pills) .tabs__tab[aria-selected='true'] > span:not(.tabs__indicator),
+#seller-main .seller-tab-row > :is([aria-pressed='true'], [aria-current='page']) > span {
+  background: #eaf1df;
+  color: #5c7731;
+}
+#seller-main :is(.ft-underline, .ft-pills) .tabs__tab:focus-visible,
+#seller-main .seller-tab-row > :is(button, a):focus-visible {
+  outline: 2px solid #59656f;
+  outline-offset: -2px;
+}
+
+/* Reserve the viewport scrollbar lane across short and long seller pages. */
+html:has(body[data-theme='nude']) {
+  scrollbar-gutter: stable;
+}
+
+/* Seller fields use one border for focus, without a second offset ring.
+   HeroUI fields draw that border on their wrapper; plain fields draw it themselves. */
+[data-theme='nude'] input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):focus,
+[data-theme='nude'] textarea:focus,
+[data-theme='nude'] select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: #59656f !important;
+}
+[data-theme='nude'] [data-slot='input-wrapper']:focus-within,
+[data-theme='nude'] [data-slot='trigger'][aria-haspopup='listbox']:focus {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  border-color: #59656f !important;
+}
+[data-theme='nude'] [data-slot='input-wrapper'] input,
+[data-theme='nude'] [data-slot='input-wrapper'] textarea {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+[data-theme='nude'] [data-slot='input-wrapper']:focus-within {
+  border-width: 1px;
+  border-style: solid;
+}
+
+/* HeroUI v2 emits !outline-solid in the utilities layer. Important declarations
+   reverse layer precedence, so an unlayered reset cannot override that utility.
+   Keep the inner control undecorated; its wrapper supplies visible focus. */
+@layer base {
+  [data-theme='nude'] [data-slot='input-wrapper'] [data-slot='input'] {
+    outline: none !important;
+    outline-width: 0 !important;
+  }
+}

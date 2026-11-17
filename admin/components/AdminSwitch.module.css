@@ -1,0 +1,12 @@
+/* Workspace toggle: a crisp 34×20 track, charcoal when on, no glow or
+   shadow — matches the 1px-border inputs beside it. */
+.base { gap:10px; }
+.wrapper { width:34px !important; height:20px !important; margin:0 !important; padding:0 2px !important; border-radius:999px !important; background:#cfd6dc !important; box-shadow:none !important; transition:background .15s; }
+.wrapper:hover { background:#bfc8d0 !important; }
+.on .wrapper { background:#191d21 !important; }
+.on .wrapper:hover { background:#30383f !important; }
+.thumb { width:16px !important; height:16px !important; background:white !important; box-shadow:0 1px 2px rgb(25 29 33 / 25%) !important; }
+.on .thumb { margin-left:14px !important; }
+.base[data-focus-visible='true'] .wrapper { outline:2px solid #59656f; outline-offset:2px; }
+.base[data-disabled='true'] { opacity:.45; }
+.label { font-size:12px; color:#39434c; }

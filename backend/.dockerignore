@@ -1,0 +1,23 @@
+# Rebuilt inside the image from a clean `npm ci`.
+node_modules
+
+# Secrets and runtime data never go into the image. Uploads are host
+# volumes; only the tracked seed PNGs in uploads/ are copied (they are
+# the only files git keeps there — see /.gitignore).
+.env
+.env.*
+!.env.example
+private-uploads
+new-products-images
+*.log
+
+# Built inside the image (Dockerfile build stage), never copied from the host.
+dist
+
+# Not needed at runtime.
+test
+.git
+.gitignore
+.DS_Store
+Dockerfile
+.dockerignore

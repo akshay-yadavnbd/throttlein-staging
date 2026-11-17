@@ -1,0 +1,959 @@
+diff --git a/admin/app/brand-requests/page.tsx b/admin/app/brand-requests/page.tsx
+index a8cd3c6..6aa67dd 100644
+--- a/admin/app/brand-requests/page.tsx
++++ b/admin/app/brand-requests/page.tsx
+@@ -26,7 +26,7 @@ import ImageSlot from '@/components/media/ImageSlot';
+ import ModuleTabs from '@/components/ModuleTabs';
+ import { StatusChip } from '@/components/ui';
+ import { IconButton, IconTrash } from '@/components/EditorShell';
+-import { api, unwrap, envelopeOrLegacy } from '@/lib/api';
++import { api, unwrap, envelopeData } from '@/lib/api';
+ import { confirmDialog } from '@/lib/confirm';
+ import { formatDate, formatDateTime } from '@/lib/dates';
+ import { notifyError, notifySuccess, notifyWarning } from '@/lib/notify';
+@@ -67,7 +67,7 @@ export default function BrandRequestsPage() {
+     .then((r) => { setItems(unwrap<{ items?: any[] }>(r).items || []); setError(null); })
+     .catch((e) => setError(e?.response?.status >= 500 || !e?.response ? 'Requests are unavailable right now.' : 'Requests couldn’t be loaded.'));
+   useEffect(() => { void load(); }, [attempt]);
+-  useEffect(() => { api.get('/categories').then(envelopeOrLegacy).then(({ data }) => setCategoryTree(data.tree || [])).catch(() => { /* the parent picker just stays empty */ }); }, []);
++  useEffect(() => { api.get('/categories').then(envelopeData).then(({ data }) => setCategoryTree(data.tree || [])).catch(() => { /* the parent picker just stays empty */ }); }, []);
+ 
+   const counts = useMemo(() => {
+     const c: Record<Tab, number> = { pending: 0, approved: 0, rejected: 0, all: 0 };
+@@ -95,8 +95,8 @@ export default function BrandRequestsPage() {
+     setSavingApprove(true);
+     try {
+       let createdId: string;
+-      if (createAs === 'brand') { const { data } = await api.post('/brands', brandForm).then(envelopeOrLegacy); createdId = data.brand._id; }
+-      else { const { data } = await api.post('/categories', { ...categoryForm, parent: categoryForm.parent || null }).then(envelopeOrLegacy); createdId = data.category._id; }
++      if (createAs === 'brand') { const { data } = await api.post('/brands', brandForm).then(envelopeData); createdId = data.brand._id; }
++      else { const { data } = await api.post('/categories', { ...categoryForm, parent: categoryForm.parent || null }).then(envelopeData); createdId = data.category._id; }
+       await api.post(`/admin/brand-category-requests/${approving._id}/approve`, { createdResourceId: createdId });
+       notifySuccess(M.brandRequests.approvedCreated(createAs));
+       setApproving(null); await load();
+diff --git a/admin/app/brands/page.tsx b/admin/app/brands/page.tsx
+index 194a857..13234e4 100644
+--- a/admin/app/brands/page.tsx
++++ b/admin/app/brands/page.tsx
+@@ -24,7 +24,7 @@ import RichTextEditor from '@/components/common/RichTextEditor';
+ import ImageSlot from '@/components/media/ImageSlot';
+ import { RowActions, StatusChip } from '@/components/ui';
+ import { Field, Counter } from '@/components/EditorShell';
+-import { api, imageUrl, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, envelopeData } from '@/lib/api';
+ import { confirmDialog } from '@/lib/confirm';
+ import { notifyError, notifySuccess, notifyWarning } from '@/lib/notify';
+ import { M } from '@/lib/messages';
+@@ -63,7 +63,7 @@ export default function BrandsPage() {
+   const [draft, setDraft] = useState<FormState>(emptyForm);
+   const [saving, setSaving] = useState(false);
+ 
+-  const load = () => api.get('/brands', { params: { counts: 1 } }).then(envelopeOrLegacy)
++  const load = () => api.get('/brands', { params: { counts: 1 } }).then(envelopeData)
+     .then(({ data }) => { setItems(data.items || []); setError(null); })
+     .catch((e) => setError(e?.response?.status >= 500 || !e?.response ? 'The brands list is unavailable right now.' : 'Brands couldn’t be loaded.'));
+   useEffect(() => { void load(); }, [attempt]);
+diff --git a/admin/app/dashboard/page.tsx b/admin/app/dashboard/page.tsx
+index ed1c208..a6e1f15 100644
+--- a/admin/app/dashboard/page.tsx
++++ b/admin/app/dashboard/page.tsx
+@@ -26,7 +26,7 @@ import { ResponsiveContainer, AreaChart, CartesianGrid, XAxis, YAxis, Tooltip, A
+ import AdminSelect from '@/components/AdminSelect';
+ import CheckoutFailures from '@/components/CheckoutFailures';
+ import { StatusChip } from '@/components/ui';
+-import { api, imageUrl, unwrap, unwrapMeta, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, unwrap, unwrapMeta, envelopeData } from '@/lib/api';
+ import { getStoredAdmin, hasPermission, type AdminUser } from '@/lib/auth';
+ import { formatDayMonth } from '@/lib/dates';
+ import { MODULES_BY_KEY, permKeyFor } from '@/lib/modules';
+@@ -206,7 +206,7 @@ export default function DashboardPage() {
+     const siteKey = (key: string) => { const m = MODULES_BY_KEY[key]; return m ? permKeyFor(m, site) : key; };
+     const cms = user.role !== 'superadmin' || site !== 'main';
+     if (cms && has(siteKey('pages'))) {
+-      api.get('/pages', { params: { all: 1 } }).then(envelopeOrLegacy).then(({ data: d }) => {
++      api.get('/pages', { params: { all: 1 } }).then(envelopeData).then(({ data: d }) => {
+         const items = d.items || [];
+         setCounts((c) => ({ ...c, pages: d.count ?? items.length }));
+         const sorted = [...items].sort((a: { updatedAt?: string }, b: { updatedAt?: string }) => Date.parse(b.updatedAt || '0') - Date.parse(a.updatedAt || '0'));
+@@ -221,7 +221,7 @@ export default function DashboardPage() {
+       }).catch(() => {});
+     }
+     if (cms && site === 'main' && has('brands')) {
+-      api.get('/brands').then(envelopeOrLegacy).then(({ data: d }) => {
++      api.get('/brands').then(envelopeData).then(({ data: d }) => {
+         const items = d.items || [];
+         setCounts((c) => ({ ...c, brands: d.count ?? items.length }));
+         const sorted = [...items].sort((a: { updatedAt?: string }, b: { updatedAt?: string }) => Date.parse(b.updatedAt || '0') - Date.parse(a.updatedAt || '0'));
+@@ -229,7 +229,7 @@ export default function DashboardPage() {
+       }).catch(() => {});
+     }
+     if (site === 'main' && has('categories')) {
+-      api.get('/categories').then(envelopeOrLegacy).then(({ data: d }) => setCounts((c) => ({ ...c, categories: (d.tree || []).length }))).catch(() => {});
++      api.get('/categories').then(envelopeData).then(({ data: d }) => setCounts((c) => ({ ...c, categories: (d.tree || []).length }))).catch(() => {});
+     }
+   }, [user, site]);
+ 
+diff --git a/admin/app/pages/dynamic/[id]/page.tsx b/admin/app/pages/dynamic/[id]/page.tsx
+index f358b28..b58780a 100644
+--- a/admin/app/pages/dynamic/[id]/page.tsx
++++ b/admin/app/pages/dynamic/[id]/page.tsx
+@@ -29,7 +29,7 @@ import SellerCategoryFields, {
+ } from '@/components/SellerCategoryFields';
+ import { StatusChip } from '@/components/ui';
+ import { EditorPage, BackLink, EditorHeader, EditorSkeleton, Field, Counter, IconLayout, IconExternal } from '@/components/EditorShell';
+-import { api, unwrap, envelopeOrLegacy } from '@/lib/api';
++import { api, unwrap, envelopeData } from '@/lib/api';
+ import { useActiveSite } from '@/lib/useActiveSite';
+ import { previewUrl } from '@/lib/storefrontUrl';
+ import { notifyError, notifySuccess, notifyWarning } from '@/lib/notify';
+@@ -146,8 +146,8 @@ export default function DynamicPageEditor({
+     let mounted = true;
+     Promise.all([
+       api.get(`/pages/id/${id}`),
+-      api.get('/categories/admin').then(envelopeOrLegacy).catch(() => ({ data: { flat: [] } })),
+-      api.get('/brands').then(envelopeOrLegacy).catch(() => ({ data: { items: [] } })),
++      api.get('/categories/admin').then(envelopeData).catch(() => ({ data: { flat: [] } })),
++      api.get('/brands').then(envelopeData).catch(() => ({ data: { items: [] } })),
+     ]).then(([pageRes, catsRes, brandsRes]) => {
+       if (!mounted) return;
+       const p: PageDoc = unwrap<{ page: PageDoc }>(pageRes).page;
+diff --git a/admin/app/pages/home/page.tsx b/admin/app/pages/home/page.tsx
+index b5892fb..18ded71 100644
+--- a/admin/app/pages/home/page.tsx
++++ b/admin/app/pages/home/page.tsx
+@@ -26,7 +26,7 @@ import ImageSlot from '@/components/media/ImageSlot';
+ import { StatusChip } from '@/components/ui';
+ import { EditorPage, BackLink, EditorHeader, EditorSkeleton, Field, Counter, IconHome, IconExternal, IconChevron } from '@/components/EditorShell';
+ import { SerpPreview, TITLE_MAX, DESC_MAX } from '@/components/SeoFields';
+-import { api, envelopeOrLegacy } from '@/lib/api';
++import { api, envelopeData } from '@/lib/api';
+ import HeroBannersEditor, { type HeroBannersEditorHandle } from '@/components/home-editors/HeroBannersEditor';
+ import PromoBlocksEditor, { type PromoBlocksEditorHandle } from '@/components/home-editors/PromoBlocksEditor';
+ import SellerCtaEditor, { type SellerCtaEditorHandle } from '@/components/home-editors/SellerCtaEditor';
+@@ -85,7 +85,7 @@ export default function HomePageMasterEditor() {
+     'https://throttlein.com'
+   ).replace(/\/$/, '');
+ 
+-  const load = () => api.get('/pages/home').then(envelopeOrLegacy)
++  const load = () => api.get('/pages/home').then(envelopeData)
+     .then(({ data }) => { setPage(data.page as HomePage); setError(null); })
+     .catch((e: any) => {
+       if (e?.response?.status === 404) {
+diff --git a/admin/app/pages/new/page.tsx b/admin/app/pages/new/page.tsx
+index 3962dc6..165b403 100644
+--- a/admin/app/pages/new/page.tsx
++++ b/admin/app/pages/new/page.tsx
+@@ -28,7 +28,7 @@ import SellerCategoryFields, {
+ } from '@/components/SellerCategoryFields';
+ import { StatusChip } from '@/components/ui';
+ import { EditorPage, BackLink, EditorHeader, Field, Counter, IconLayout, IconExternal } from '@/components/EditorShell';
+-import { api, unwrap, envelopeOrLegacy } from '@/lib/api';
++import { api, unwrap, envelopeData } from '@/lib/api';
+ import { useActiveSite } from '@/lib/useActiveSite';
+ import { previewUrl } from '@/lib/storefrontUrl';
+ import { notifyError, notifySuccess, notifyWarning } from '@/lib/notify';
+@@ -146,8 +146,8 @@ export default function NewPageEditor() {
+         const [catsRes, brandsRes] = await Promise.all([
+           // Admin returns { flat: [...], tree: [...] }. We want the flat
+           // list so sub-categories show alongside their parents.
+-          api.get('/categories/admin').then(envelopeOrLegacy).catch(() => ({ data: { flat: [] } })),
+-          api.get('/brands').then(envelopeOrLegacy).catch(() => ({ data: { items: [] } })),
++          api.get('/categories/admin').then(envelopeData).catch(() => ({ data: { flat: [] } })),
++          api.get('/brands').then(envelopeData).catch(() => ({ data: { items: [] } })),
+         ]);
+         if (!mounted) return;
+         // Only ACTIVE categories/brands — inactive ones don't exist on
+diff --git a/admin/app/pages/page.tsx b/admin/app/pages/page.tsx
+index 503ab23..6cbdec4 100644
+--- a/admin/app/pages/page.tsx
++++ b/admin/app/pages/page.tsx
+@@ -24,7 +24,7 @@ import AdminSwitch from '@/components/AdminSwitch';
+ import AdminButton from '@/components/AdminButton';
+ import ModuleTabs from '@/components/ModuleTabs';
+ import { RowActions, StatusChip } from '@/components/ui';
+-import { api, unwrap, envelopeOrLegacy } from '@/lib/api';
++import { api, unwrap, envelopeData } from '@/lib/api';
+ import { confirmDialog } from '@/lib/confirm';
+ import { formatDate } from '@/lib/dates';
+ import { STATIC_PAGES, type StaticPageEntry } from '@/lib/staticPages';
+@@ -90,7 +90,7 @@ export default function PagesAdminPage() {
+   const [search, setSearch] = useState('');
+   const [page, setPage] = useState(1);
+ 
+-  const load = () => api.get('/pages', { params: { all: 1 } }).then(envelopeOrLegacy)
++  const load = () => api.get('/pages', { params: { all: 1 } }).then(envelopeData)
+     .then(({ data }) => { setItems(data.items || []); setError(null); })
+     .catch((e) => setError(e?.response?.status >= 500 || !e?.response ? 'The pages list is unavailable right now.' : 'Pages couldn’t be loaded.'));
+   useEffect(() => { void load(); }, [site, attempt]);
+diff --git a/admin/app/pages/prose/page.tsx b/admin/app/pages/prose/page.tsx
+index 7258ff5..77d6286 100644
+--- a/admin/app/pages/prose/page.tsx
++++ b/admin/app/pages/prose/page.tsx
+@@ -19,7 +19,7 @@ import AdminSwitch from '@/components/AdminSwitch';
+ import AdminShell from '@/components/AdminShell';
+ import AdminInput from '@/components/AdminInput';
+ import HeroStat from '@/components/HeroStat';
+-import { api, unwrap, envelopeOrLegacy } from '@/lib/api';
++import { api, unwrap, envelopeData } from '@/lib/api';
+ import { confirmDialog } from '@/lib/confirm';
+ import { useActiveSite } from '@/lib/useActiveSite';
+ import { notifyError, notifySuccess, notifyWarning } from '@/lib/notify';
+@@ -65,7 +65,7 @@ export default function ProsePagesIndex() {
+   const [creating, setCreating] = useState(false);
+   const slugTouched = useRef(false);
+ 
+-  const load = useCallback(() => api.get('/pages', { params: { all: 1 } }).then(envelopeOrLegacy)
++  const load = useCallback(() => api.get('/pages', { params: { all: 1 } }).then(envelopeData)
+     .then(({ data }) => setItems(data.items || []))
+     .catch((e: any) => notifyError(e, M.pages.couldntLoadPages))
+     .finally(() => setLoadedFor(site)), [site]);
+diff --git a/admin/app/pages/sell/page.tsx b/admin/app/pages/sell/page.tsx
+index ce93ca3..41b7c1b 100644
+--- a/admin/app/pages/sell/page.tsx
++++ b/admin/app/pages/sell/page.tsx
+@@ -27,7 +27,7 @@ import SellerGuideSectionEditor from '@/components/sell-editors/SellerGuideSecti
+ import SellerFaqEditor from '@/components/sell-editors/SellerFaqEditor';
+ import { StatusChip } from '@/components/ui';
+ import { EditorPage, BackLink, EditorHeader, IconButton, IconUp, IconDown, IconTrash, IconPlus, IconHome, IconImage } from '@/components/EditorShell';
+-import { api, imageUrl, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, envelopeData } from '@/lib/api';
+ import { confirmDialog } from '@/lib/confirm';
+ import { notifyError, notifySuccess } from '@/lib/notify';
+ import { M } from '@/lib/messages';
+@@ -48,7 +48,7 @@ type Guide = {
+ export default function SellPageEditor() {
+   const [items, setItems] = useState<Guide[] | null>(null);
+ 
+-  const load = () => api.get('/seller-guides').then(envelopeOrLegacy)
++  const load = () => api.get('/seller-guides').then(envelopeData)
+     .then(({ data }) => setItems(Array.isArray(data?.items) ? data.items : []))
+     .catch((e: any) => { notifyError(e, M.pages.couldntLoadGuides); setItems([]); });
+   useEffect(() => { void load(); }, []);
+diff --git a/admin/components/CategoryTable.tsx b/admin/components/CategoryTable.tsx
+index 62de129..ebb67e2 100644
+--- a/admin/components/CategoryTable.tsx
++++ b/admin/components/CategoryTable.tsx
+@@ -24,7 +24,7 @@ import RichTextEditor from '@/components/common/RichTextEditor';
+ import ImageSlot from '@/components/media/ImageSlot';
+ import { RowActions, StatusChip } from '@/components/ui';
+ import { FieldMeta, SerpPreview, TITLE_MAX, DESC_MAX } from '@/components/SeoFields';
+-import { api, imageUrl, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, envelopeData } from '@/lib/api';
+ import { confirmDialog } from '@/lib/confirm';
+ import { previewUrl, storefrontOrigin } from '@/lib/storefrontUrl';
+ import { notifyError, notifySuccess, notifyWarning } from '@/lib/notify';
+@@ -79,7 +79,7 @@ export default function CategoryTable({ rootName, excludeRootName, emptyText = '
+   const [draft, setDraft] = useState<FormState>(emptyForm);
+   const [saving, setSaving] = useState(false);
+ 
+-  const load = () => api.get('/categories/admin').then(envelopeOrLegacy)
++  const load = () => api.get('/categories/admin').then(envelopeData)
+     .then(({ data }) => { setAll(data.flat as Category[]); setError(null); })
+     .catch((e) => setError(e?.response?.status >= 500 || !e?.response ? 'The category list is unavailable right now.' : 'Categories couldn’t be loaded.'));
+   useEffect(() => { void load(); }, [attempt]);
+diff --git a/admin/components/StaticPageMetaPanel.tsx b/admin/components/StaticPageMetaPanel.tsx
+index a56e610..c040419 100644
+--- a/admin/components/StaticPageMetaPanel.tsx
++++ b/admin/components/StaticPageMetaPanel.tsx
+@@ -21,7 +21,7 @@ import AdminTextarea from '@/components/AdminTextarea';
+ import RichTextEditor from '@/components/common/RichTextEditor';
+ import ImageSlot from '@/components/media/ImageSlot';
+ import { Field, Counter } from '@/components/EditorShell';
+-import { api, unwrap, envelopeOrLegacy } from '@/lib/api';
++import { api, unwrap, envelopeData } from '@/lib/api';
+ import { notifyError, notifySuccess } from '@/lib/notify';
+ import { M } from '@/lib/messages';
+ import form from '@/components/AdminForm.module.css';
+@@ -65,7 +65,7 @@ export default function StaticPageMetaPanel({
+     };
+     // Fetch all static-meta pages and find the one matching this route.
+     // Lighter than a dedicated endpoint and the list is small.
+-    api.get('/pages', { params: { type: 'static-meta', all: 1 } }).then(envelopeOrLegacy)
++    api.get('/pages', { params: { type: 'static-meta', all: 1 } }).then(envelopeData)
+       .then(({ data }) => {
+         if (!mounted) return;
+         const match = (data.items || []).find((p: any) => p.staticRoute === route);
+diff --git a/admin/components/home-editors/HeroBannersEditor.tsx b/admin/components/home-editors/HeroBannersEditor.tsx
+index ea5fe54..f1d056d 100644
+--- a/admin/components/home-editors/HeroBannersEditor.tsx
++++ b/admin/components/home-editors/HeroBannersEditor.tsx
+@@ -22,7 +22,7 @@ import ImageSlot from '@/components/media/ImageSlot';
+ import MediaPicker from '@/components/media/MediaPicker';
+ import { StatusChip } from '@/components/ui';
+ import { Field, IconButton, IconTrash, IconClose, IconPlus, IconImage } from '@/components/EditorShell';
+-import { api, imageUrl, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, envelopeData } from '@/lib/api';
+ import { confirmDialog } from '@/lib/confirm';
+ import { notifyError, notifySuccess, notifyWarning } from '@/lib/notify';
+ import { M } from '@/lib/messages';
+@@ -118,7 +118,7 @@ const HeroBannersEditor = forwardRef<HeroBannersEditorHandle, HeroBannersEditorP
+   const [draft, setDraft] = useState<FormState>(EMPTY_FORM);
+   const [saving, setSaving] = useState(false);
+ 
+-  const load = () => api.get('/home-banners').then(envelopeOrLegacy)
++  const load = () => api.get('/home-banners').then(envelopeData)
+     .then(({ data }) => setItems(data.items || []))
+     .catch((e: any) => { notifyError(e, M.homeEditors.couldntLoadBanners); setItems([]); });
+   useEffect(() => { void load(); }, []);
+diff --git a/admin/components/home-editors/HomeSeoBlockEditor.tsx b/admin/components/home-editors/HomeSeoBlockEditor.tsx
+index 56ff0c5..2e85e2c 100644
+--- a/admin/components/home-editors/HomeSeoBlockEditor.tsx
++++ b/admin/components/home-editors/HomeSeoBlockEditor.tsx
+@@ -15,7 +15,7 @@ import AdminButton from '@/components/AdminButton';
+ import AdminInput from '@/components/AdminInput';
+ import RichTextEditor from '@/components/common/RichTextEditor';
+ import { Field, AddButton, RowTools } from '@/components/EditorShell';
+-import { api, envelopeOrLegacy } from '@/lib/api';
++import { api, envelopeData } from '@/lib/api';
+ import { notifyError, notifySuccess } from '@/lib/notify';
+ import { M } from '@/lib/messages';
+ import form from '@/components/AdminForm.module.css';
+@@ -63,7 +63,7 @@ const HomeSeoBlockEditor = forwardRef<HomeSeoBlockEditorHandle, HomeSeoBlockEdit
+   useEffect(() => { if (draft) formRef.current = draft; }, [draft]);
+ 
+   useEffect(() => {
+-    api.get('/home-seo').then(envelopeOrLegacy).then(({ data }) => {
++    api.get('/home-seo').then(envelopeData).then(({ data }) => {
+       if (!data?.block) { setForm(EMPTY); return; }
+       const top: SeoLink[] = Array.isArray(data.block.links)
+         ? data.block.links.map((l: any) => ({ label: l?.label || '', href: l?.href || '' }))
+diff --git a/admin/components/home-editors/SellerCtaEditor.tsx b/admin/components/home-editors/SellerCtaEditor.tsx
+index 46c0f38..514beb3 100644
+--- a/admin/components/home-editors/SellerCtaEditor.tsx
++++ b/admin/components/home-editors/SellerCtaEditor.tsx
+@@ -16,7 +16,7 @@ import AdminInput from '@/components/AdminInput';
+ import AdminTextarea from '@/components/AdminTextarea';
+ import ImageSlot from '@/components/media/ImageSlot';
+ import { Field } from '@/components/EditorShell';
+-import { api, unwrap, envelopeOrLegacy } from '@/lib/api';
++import { api, unwrap, envelopeData } from '@/lib/api';
+ import { notifyError, notifySuccess, notifyWarning } from '@/lib/notify';
+ import { M } from '@/lib/messages';
+ import form from '@/components/AdminForm.module.css';
+@@ -60,7 +60,7 @@ const SellerCtaEditor = forwardRef<SellerCtaEditorHandle, SellerCtaEditorProps>(
+   useEffect(() => { if (draft) formRef.current = draft; }, [draft]);
+ 
+   useEffect(() => {
+-    api.get('/seller-cta').then(envelopeOrLegacy)
++    api.get('/seller-cta').then(envelopeData)
+       .then(({ data }) => setForm({ ...empty, ...(data?.cta || {}) }))
+       .catch(() => { notifyWarning(M.homeEditors.couldNotLoadSellerCTA); setForm(empty); });
+   }, []);
+diff --git a/admin/components/sell-editors/SellerGuideSectionEditor.tsx b/admin/components/sell-editors/SellerGuideSectionEditor.tsx
+index 29d9155..7990eab 100644
+--- a/admin/components/sell-editors/SellerGuideSectionEditor.tsx
++++ b/admin/components/sell-editors/SellerGuideSectionEditor.tsx
+@@ -12,7 +12,7 @@ import AdminSwitch from '@/components/AdminSwitch';
+ import AdminButton from '@/components/AdminButton';
+ import AdminInput from '@/components/AdminInput';
+ import AdminTextarea from '@/components/AdminTextarea';
+-import { api, envelopeOrLegacy } from '@/lib/api';
++import { api, envelopeData } from '@/lib/api';
+ import { notifyError, notifySuccess } from '@/lib/notify';
+ import { M } from '@/lib/messages';
+ import form from '@/components/AdminForm.module.css';
+@@ -30,7 +30,7 @@ export default function SellerGuideSectionEditor() {
+   const [saving, setSaving] = useState(false);
+ 
+   useEffect(() => {
+-    api.get('/seller-guide-section').then(envelopeOrLegacy)
++    api.get('/seller-guide-section').then(envelopeData)
+       .then(({ data }) => setForm(data?.section ? {
+         heading: data.section.heading || '',
+         subheading: data.section.subheading || '',
+diff --git a/admin/lib/api.ts b/admin/lib/api.ts
+index 6f98178..900921c 100644
+--- a/admin/lib/api.ts
++++ b/admin/lib/api.ts
+@@ -82,37 +82,26 @@ export function unwrapMeta<T, M>(r: { data: Envelope<T, M> }): { data: T; meta:
+ }
+ 
+ /**
+- * Tolerant readers for endpoints that every app shares (categories, brands,
+- * and the public catalogue as it moves to the envelope). They take `data`
+- * out of `{ data, meta? }` and pass a legacy body through unchanged, so a
+- * page keeps working whichever of frontend and backend deploys first —
+- * which matters for server-rendered storefront pages and menus. For an
+- * endpoint only this app reads, prefer `unwrap`: both sides ship together.
+- * Paging meta (`page, pageSize, totalItems, totalPages`) comes back as the
+- * legacy `page, limit, total, pages` keys beside the data.
++ * Readers for list and detail answers on endpoints every app shares (catalogue,
++ * CMS, blog), used where a page reads `data.total` / `data.pages` beside the
++ * rows. `dataOf` takes `data` out of `{ data, meta? }` and folds paging meta
++ * (`page, pageSize, totalItems, totalPages`) back in as `page, limit, total,
++ * pages`. For anything else, `unwrap` / `unwrapMeta` read the envelope as is.
+  */
+ export function dataOf<T = any>(body: any): T {
+-  if (body && typeof body === 'object' && !Array.isArray(body)) {
+-    const keys = Object.keys(body);
+-    if (keys.includes('data') && keys.every((k) => k === 'data' || k === 'meta')) {
+-      const { data, meta } = body;
+-      if (!meta || !data || typeof data !== 'object' || Array.isArray(data)) return data as T;
+-      // Paging meta folds back into the keys the legacy list bodies used,
+-      // so `data.total` / `data.pages` readers work on either shape.
+-      return {
+-        ...data,
+-        page: data.page ?? meta.page,
+-        limit: data.limit ?? meta.pageSize,
+-        total: data.total ?? meta.totalItems,
+-        pages: data.pages ?? meta.totalPages,
+-      } as T;
+-    }
+-  }
+-  return body as T;
++  const { data, meta } = body ?? {};
++  if (!meta || !data || typeof data !== 'object' || Array.isArray(data)) return data as T;
++  return {
++    ...data,
++    page: data.page ?? meta.page,
++    limit: data.limit ?? meta.pageSize,
++    total: data.total ?? meta.totalItems,
++    pages: data.pages ?? meta.totalPages,
++  } as T;
+ }
+ 
+-/** `api.get(...).then(envelopeOrLegacy)` — the response with `data` replaced by `dataOf(data)`. */
+-export function envelopeOrLegacy<R extends { data: any }>(r: R): R {
++/** `api.get(...).then(envelopeData)` — the response with `data` replaced by `dataOf(data)`. */
++export function envelopeData<R extends { data: any }>(r: R): R {
+   return { ...r, data: dataOf(r.data) };
+ }
+ 
+diff --git a/frontend/components/common/Navbar.tsx b/frontend/components/common/Navbar.tsx
+index 87ab38b..e0f7cb7 100644
+--- a/frontend/components/common/Navbar.tsx
++++ b/frontend/components/common/Navbar.tsx
+@@ -22,7 +22,7 @@ import {
+   useDisclosure,
+ } from '@heroui/react';
+ import MobileSearchSheet from '@/components/common/MobileSearchSheet';
+-import { api, envelopeOrLegacy, imageUrl, unwrap } from '@/lib/api';
++import { api, envelopeData, imageUrl, unwrap } from '@/lib/api';
+ import { categoryHref, nameToSlug } from '@/lib/categorySlug';
+ import {
+   clearStoredCustomer, getStoredCustomer, type CustomerUser,
+@@ -248,7 +248,7 @@ export default function Navbar() {
+       // any visible product — the menus below hide categories no seller
+       // has stocked yet (per product decision).
+       .get('/categories', { params: { hasProducts: 1 } })
+-      .then(envelopeOrLegacy)
++      .then(envelopeData)
+       .then(({ data }) => setTree(Array.isArray(data?.tree) ? (data.tree as CategoryNode[]) : []))
+       .catch(() => setTree([]));
+   }, []);
+diff --git a/frontend/components/common/ProductForm.tsx b/frontend/components/common/ProductForm.tsx
+index 25407e0..681cc65 100644
+--- a/frontend/components/common/ProductForm.tsx
++++ b/frontend/components/common/ProductForm.tsx
+@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
+ import { Card, CardBody, Input, Textarea, Spinner, Switch } from '@heroui/react';
+ import Button from '@/components/common/SellerButton';
+ import toast from 'react-hot-toast';
+-import { api, imageUrl, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, envelopeData } from '@/lib/api';
+ import RichTextEditor from '@/components/common/RichTextEditor';
+ import MediaPickerModal from '@/components/common/MediaPickerModal';
+ import ProductUrlImport from '@/components/common/ProductUrlImport';
+@@ -525,7 +525,7 @@ function ProductFormEditor({
+ 
+   useEffect(() => {
+     api
+-      .get('/brands', { params: { active: 1 } }).then(envelopeOrLegacy)
++      .get('/brands', { params: { active: 1 } }).then(envelopeData)
+       .then(({ data }) => setBrands(data.items as BrandLite[]))
+       .catch(() => notifyWarning(M.productForm.failedToLoadBrands))
+       .finally(() => setLoadingBrands(false));
+@@ -837,7 +837,7 @@ function ProductFormEditor({
+   // Fetch the full active tree on mount (admin endpoint isn't needed; public works)
+   useEffect(() => {
+     api
+-      .get('/categories').then(envelopeOrLegacy)
++      .get('/categories').then(envelopeData)
+       // A response without `tree` used to put `undefined` in state and
+       // crash the whole editor on `tree.find` below; treat it like a
+       // failed load instead.
+diff --git a/frontend/components/common/SearchDropdown.tsx b/frontend/components/common/SearchDropdown.tsx
+index 3c08d3c..18de6df 100644
+--- a/frontend/components/common/SearchDropdown.tsx
++++ b/frontend/components/common/SearchDropdown.tsx
+@@ -32,7 +32,7 @@ import Image from 'next/image';
+ import Link from 'next/link';
+ import { useEffect, useRef, useState } from 'react';
+ import { useRouter, usePathname } from 'next/navigation';
+-import { api, imageUrl, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, envelopeData } from '@/lib/api';
+ import Arrow from '@/components/common/Arrow';
+ 
+ export type Suggestion = {
+@@ -81,7 +81,7 @@ export function useSearchSuggest(query: string) {
+     const t = setTimeout(async () => {
+       let items: Suggestion[] = [];
+       try {
+-        const { data } = await api.get('/products/search-suggest', { params: { q } }).then(envelopeOrLegacy);
++        const { data } = await api.get('/products/search-suggest', { params: { q } }).then(envelopeData);
+         items = Array.isArray(data?.items) ? data.items : [];
+       } catch {
+         items = [];
+diff --git a/frontend/components/pages/BlogDetailPage.tsx b/frontend/components/pages/BlogDetailPage.tsx
+index ddd9dc2..63d2c98 100644
+--- a/frontend/components/pages/BlogDetailPage.tsx
++++ b/frontend/components/pages/BlogDetailPage.tsx
+@@ -43,7 +43,7 @@ import { use, useEffect, useMemo, useRef, useState } from 'react';
+ import Link from 'next/link';
+ import Image from 'next/image';
+ import { Spinner, Button } from '@heroui/react';
+-import { api, imageUrl, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, envelopeData } from '@/lib/api';
+ import {
+   buildPostUrl,
+   buildPostUrlForSite,
+@@ -286,7 +286,7 @@ export default function BlogDetailPage({
+       setLoading(true);
+     }
+     setChainMismatch(false);
+-    api.get(`/blog/${postSlug}`).then(envelopeOrLegacy)
++    api.get(`/blog/${postSlug}`).then(envelopeData)
+       .then(async ({ data }) => {
+         // Verify the URL's category chain matches the post's actual
+         // chain (root → leaf). Strict equality, slug-by-slug. Mismatch
+@@ -331,7 +331,7 @@ export default function BlogDetailPage({
+           if (data.post?.category?.slug) {
+             const { data: rel } = await api.get('/blog', {
+               params: { category: data.post.category.slug, limit: 6 },
+-            }).then(envelopeOrLegacy);
++            }).then(envelopeData);
+             take(rel.items || []);
+           }
+           // Pass 2 — fill remaining slots with any recent posts. The
+@@ -339,7 +339,7 @@ export default function BlogDetailPage({
+           // to keep the strip from looking static if it's the only
+           // available pool.
+           if (picks.size < 3) {
+-            const { data: any } = await api.get('/blog', { params: { limit: 12 } }).then(envelopeOrLegacy);
++            const { data: any } = await api.get('/blog', { params: { limit: 12 } }).then(envelopeData);
+             const pool = ([...(any.items || [])] as Post[]).sort(() => Math.random() - 0.5);
+             take(pool);
+           }
+diff --git a/frontend/components/pages/BlogIndexPage.tsx b/frontend/components/pages/BlogIndexPage.tsx
+index 6a17c9b..af03af9 100644
+--- a/frontend/components/pages/BlogIndexPage.tsx
++++ b/frontend/components/pages/BlogIndexPage.tsx
+@@ -25,7 +25,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+ import Link from 'next/link';
+ import Image from 'next/image';
+ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+-import { api, imageUrl, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, envelopeData } from '@/lib/api';
+ import { buildPostUrlForSite, blogPathForSite } from '@/lib/blogUrl';
+ import type { SiteKey } from '@/lib/site';
+ import Breadcrumbs from '@/components/common/Breadcrumbs';
+@@ -172,7 +172,7 @@ export default function BlogIndexPage({
+ 
+   // Load categories once + featured (only when not in category mode)
+   useEffect(() => {
+-    api.get('/blog/categories').then(envelopeOrLegacy).then(({ data }) => setCategories(data.items || [])).catch(() => { });
++    api.get('/blog/categories').then(envelopeData).then(({ data }) => setCategories(data.items || [])).catch(() => { });
+   }, []);
+ 
+   // `activeCategory` is driven by the URL prop ONLY — it controls
+@@ -187,7 +187,7 @@ export default function BlogIndexPage({
+       if (cached) {
+         setActiveCategory(cached);
+       } else {
+-        api.get('/blog/categories').then(envelopeOrLegacy).then(({ data }) => {
++        api.get('/blog/categories').then(envelopeData).then(({ data }) => {
+           const match = (data.items || []).find((c: Category) => c.slug === categorySlug);
+           setActiveCategory(match || null);
+         }).catch(() => { });
+@@ -195,7 +195,7 @@ export default function BlogIndexPage({
+     } else {
+       setActiveCategory(null);
+       // Featured hero only on the all-blogs view, not category pages.
+-      api.get('/blog/featured').then(envelopeOrLegacy).then(({ data }) => setFeatured(data.post || null)).catch(() => { });
++      api.get('/blog/featured').then(envelopeData).then(({ data }) => setFeatured(data.post || null)).catch(() => { });
+     }
+   }, [categorySlug, categories]);
+ 
+@@ -221,7 +221,7 @@ export default function BlogIndexPage({
+      * landed on — page 1 showed 9 cards against 10 everywhere else, so
+      * the 3-column grid only looked right on page 1. */
+     if (featured?._id) params.exclude = featured._id;
+-    api.get('/blog', { params }).then(envelopeOrLegacy)
++    api.get('/blog', { params }).then(envelopeData)
+       .then(({ data }) => {
+         // Server already excluded it; this stays as a cheap guard for a
+         // stale/older API that ignores `exclude`.
+diff --git a/frontend/components/pages/BrandPage.tsx b/frontend/components/pages/BrandPage.tsx
+index aa73569..1ab8dea 100644
+--- a/frontend/components/pages/BrandPage.tsx
++++ b/frontend/components/pages/BrandPage.tsx
+@@ -18,7 +18,7 @@ import { use, useEffect, useMemo, useState } from 'react';
+ import Link from 'next/link';
+ import Image from 'next/image';
+ import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react';
+-import { api, imageUrl, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, envelopeData } from '@/lib/api';
+ import ProductCard, { type Product } from '@/components/common/ProductCard';
+ import Breadcrumbs from '@/components/common/Breadcrumbs';
+ import RichTextView from '@/components/common/RichTextView';
+@@ -79,7 +79,7 @@ export default function BrandPage({
+     setBrandLoading(true);
+     setBrandNotFound(false);
+     api
+-      .get('/brands', { params: { active: 1 } }).then(envelopeOrLegacy)
++      .get('/brands', { params: { active: 1 } }).then(envelopeData)
+       .then(({ data }) => {
+         if (cancelled) return;
+         const items: Brand[] = data.items || [];
+@@ -130,7 +130,7 @@ export default function BrandPage({
+           sort: sort || 'newest',
+           limit: 48,
+         },
+-      }).then(envelopeOrLegacy)
++      }).then(envelopeData)
+       .then(({ data }) => {
+         setProducts(data.items || []);
+         setTotal(data.total ?? data.items?.length ?? 0);
+diff --git a/frontend/components/pages/BrandsIndexPage.tsx b/frontend/components/pages/BrandsIndexPage.tsx
+index 8d776b9..0f8cfea 100644
+--- a/frontend/components/pages/BrandsIndexPage.tsx
++++ b/frontend/components/pages/BrandsIndexPage.tsx
+@@ -17,7 +17,7 @@ import { useEffect, useMemo, useState } from 'react';
+ import Link from 'next/link';
+ import Image from 'next/image';
+ import { Input, Spinner } from '@heroui/react';
+-import { api, envelopeOrLegacy, imageUrl } from '@/lib/api';
++import { api, envelopeData, imageUrl } from '@/lib/api';
+ import Breadcrumbs from '@/components/common/Breadcrumbs';
+ 
+ type Brand = {
+@@ -48,7 +48,7 @@ export default function BrandsIndexPage({
+       // active product; empty brands would land on a "no products yet"
+       // page and read as broken.
+       .get('/brands', { params: { active: 1, withProducts: 1 } })
+-      .then(envelopeOrLegacy)
++      .then(envelopeData)
+       .then(({ data }) => setBrands((data.items as Brand[]) || []))
+       .catch(() => setBrands([]))
+       .finally(() => setLoading(false));
+diff --git a/frontend/components/pages/CategoryPage.tsx b/frontend/components/pages/CategoryPage.tsx
+index 28b65e9..a7605a9 100644
+--- a/frontend/components/pages/CategoryPage.tsx
++++ b/frontend/components/pages/CategoryPage.tsx
+@@ -28,7 +28,7 @@ import {
+   Button, Chip, Checkbox, Slider, Input, Spinner,
+   Dropdown, DropdownTrigger, DropdownMenu, DropdownItem,
+ } from '@heroui/react';
+-import { api, imageUrl, unwrap, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, unwrap, envelopeData } from '@/lib/api';
+ import { customerApi } from '@/lib/customerApi';
+ import { getStoredCustomer } from '@/lib/customerAuth';
+ import { nameToSlug, slugToName } from '@/lib/categorySlug';
+@@ -269,7 +269,7 @@ export default function CategoryPage({
+   const [treeLoaded, setTreeLoaded] = useState(false);
+   useEffect(() => {
+     api
+-      .get('/categories').then(envelopeOrLegacy)
++      .get('/categories').then(envelopeData)
+       .then(({ data }) => setTree(data.tree || []))
+       .catch(() => setTree([]))
+       .finally(() => setTreeLoaded(true));
+@@ -570,7 +570,7 @@ export default function CategoryPage({
+               // the newest slice of it.
+               limit: 300,
+             },
+-          }).then(envelopeOrLegacy)
++          }).then(envelopeData)
+           .then(({ data }) => {
+             // Spell-corrected search — the backend retried a fixed
+             // query ("hemlets" → "helmets") when the raw one had no
+diff --git a/frontend/components/pages/DashboardBrandsCategoriesPage.tsx b/frontend/components/pages/DashboardBrandsCategoriesPage.tsx
+index 9d9845e..b26b7e9 100644
+--- a/frontend/components/pages/DashboardBrandsCategoriesPage.tsx
++++ b/frontend/components/pages/DashboardBrandsCategoriesPage.tsx
+@@ -10,7 +10,7 @@ import {
+   type DataTableColumn,
+ } from '@/components/ui';
+ import { formatDate } from '@/lib/dates';
+-import { api, imageUrl, unwrap, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, unwrap, envelopeData } from '@/lib/api';
+ import { confirmDialog } from '@/lib/confirm';
+ import { useKycStatus } from '@/lib/kyc';
+ import Link from 'next/link';
+@@ -102,8 +102,8 @@ export default function DashboardBrandsCategoriesPage() {
+     setLoading(true);
+     try {
+       const [catRes, brandRes] = await Promise.all([
+-        api.get('/categories').then(envelopeOrLegacy),
+-        api.get('/brands', { params: { active: '1' } }).then(envelopeOrLegacy),
++        api.get('/categories').then(envelopeData),
++        api.get('/brands', { params: { active: '1' } }).then(envelopeData),
+       ]);
+       setTree(catRes.data.tree || []);
+       setBrands(brandRes.data.items || []);
+diff --git a/frontend/components/pages/DashboardProductDetailPage.tsx b/frontend/components/pages/DashboardProductDetailPage.tsx
+index a2ae451..d88d87a 100644
+--- a/frontend/components/pages/DashboardProductDetailPage.tsx
++++ b/frontend/components/pages/DashboardProductDetailPage.tsx
+@@ -4,7 +4,7 @@ import { use, useEffect, useState } from 'react';
+ import Link from 'next/link';
+ import { Spinner } from '@heroui/react';
+ import ProductForm from '@/components/common/ProductForm';
+-import { api, envelopeOrLegacy } from '@/lib/api';
++import { api, envelopeData } from '@/lib/api';
+ 
+ export default function DashboardProductDetailPage({
+   params,
+@@ -15,7 +15,7 @@ export default function DashboardProductDetailPage({
+   const [initial, setInitial] = useState<any>(null);
+ 
+   useEffect(() => {
+-    api.get(`/products/${slug}`).then(envelopeOrLegacy).then(({ data }) => setInitial(data.product));
++    api.get(`/products/${slug}`).then(envelopeData).then(({ data }) => setInitial(data.product));
+   }, [slug]);
+ 
+   return (
+diff --git a/frontend/components/pages/DashboardProductsPage.tsx b/frontend/components/pages/DashboardProductsPage.tsx
+index bc6417f..ee003d4 100644
+--- a/frontend/components/pages/DashboardProductsPage.tsx
++++ b/frontend/components/pages/DashboardProductsPage.tsx
+@@ -14,7 +14,7 @@ import {
+   TablePagination,
+   type DataTableColumn,
+ } from '@/components/ui';
+-import { api, imageUrl, API_URL, envelopeOrLegacy, unwrap } from '@/lib/api';
++import { api, imageUrl, API_URL, envelopeData, unwrap } from '@/lib/api';
+ import { confirmDialog } from '@/lib/confirm';
+ import { readListCache, writeListCache } from '@/lib/listCache';
+ import { notifyError, notifySuccess, notifyWarning, apiMessage } from '@/lib/notify';
+@@ -334,7 +334,7 @@ export default function DashboardProductsPage() {
+   async function openEdit(p: Product) {
+     setOpeningId(p._id);
+     try {
+-      const { data } = await api.get(`/products/${p.slug || p._id}`).then(envelopeOrLegacy);
++      const { data } = await api.get(`/products/${p.slug || p._id}`).then(envelopeData);
+       setEditor({ mode: 'edit', product: data.product });
+     } catch (e: any) {
+       notifyError(e, M.products.couldntOpenThatProduct);
+diff --git a/frontend/components/pages/DynamicPage.tsx b/frontend/components/pages/DynamicPage.tsx
+index bb61c44..2260fe5 100644
+--- a/frontend/components/pages/DynamicPage.tsx
++++ b/frontend/components/pages/DynamicPage.tsx
+@@ -22,7 +22,7 @@ import { useEffect, useMemo, useState } from 'react';
+ import Link from 'next/link';
+ import Image from 'next/image';
+ import { Spinner } from '@heroui/react';
+-import { api, imageUrl, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, envelopeData } from '@/lib/api';
+ import RichTextView from '@/components/common/RichTextView';
+ import CategoryPage from '@/components/pages/CategoryPage';
+ import type { ResolvedPage } from '@/lib/pageResolver';
+@@ -217,7 +217,7 @@ function BrandsListTemplate({ page }: { page: ResolvedPage }) {
+   useEffect(() => {
+     let cancelled = false;
+     api
+-      .get('/brands?limit=200').then(envelopeOrLegacy)
++      .get('/brands?limit=200').then(envelopeData)
+       .then(({ data }) => {
+         if (!cancelled) setBrands(data.items || data.brands || []);
+       })
+@@ -265,7 +265,7 @@ function CategoriesListTemplate({ page }: { page: ResolvedPage }) {
+   useEffect(() => {
+     let cancelled = false;
+     api
+-      .get('/categories').then(envelopeOrLegacy)
++      .get('/categories').then(envelopeData)
+       .then(({ data }) => {
+         // Public endpoint returns a tree. Flatten top level only — that's
+         // the most useful default. (Sub-cat children render under each.)
+diff --git a/frontend/components/pages/ProductDetailPage.tsx b/frontend/components/pages/ProductDetailPage.tsx
+index 9f44294..e6dd074 100644
+--- a/frontend/components/pages/ProductDetailPage.tsx
++++ b/frontend/components/pages/ProductDetailPage.tsx
+@@ -24,7 +24,7 @@ import Image from 'next/image';
+ import { useRouter, useSearchParams } from 'next/navigation';
+ import { Spinner, Chip, Button, Tabs, Tab, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Textarea } from '@heroui/react';
+ import { ChevronDownIcon } from '@heroui/shared-icons';
+-import { api, imageUrl, unwrap, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, unwrap, envelopeData } from '@/lib/api';
+ import { customerApi } from '@/lib/customerApi';
+ import { getStoredCustomer } from '@/lib/customerAuth';
+ import { invalidateWishlist } from '@/lib/wishlist';
+@@ -491,7 +491,7 @@ export default function ProductDetailPage({
+ 
+   useEffect(() => {
+     api
+-      .get(`/products/${slug}`).then(envelopeOrLegacy)
++      .get(`/products/${slug}`).then(envelopeData)
+       .then(({ data }) => {
+         const p = data.product;
+         if (!p) { setCatalog(null); return; }
+@@ -527,7 +527,7 @@ export default function ProductDetailPage({
+   function loadReviews() {
+     setReviewsLoading(true);
+     api
+-      .get(`/products/${slug}/reviews`).then(envelopeOrLegacy)
++      .get(`/products/${slug}/reviews`).then(envelopeData)
+       .then(({ data }) => {
+         setReviews(data.reviews || []);
+         setDistribution(data.distribution || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
+@@ -2860,7 +2860,7 @@ function RelatedProducts({
+     setLoading(true);
+ 
+     api
+-      .get('/products', { params: { category: categorySlug, limit: 8 } }).then(envelopeOrLegacy)
++      .get('/products', { params: { category: categorySlug, limit: 8 } }).then(envelopeData)
+       .then(({ data }) => {
+         if (cancelled) return;
+         const list: ListingProduct[] = (data.items || []).filter(
+@@ -2988,7 +2988,7 @@ function DeliveryRate({ slug }: { slug: string }) {
+     try {
+       const { data } = await api.get(`/products/${slug}/shipping-rate`, {
+         params: { pincode: p },
+-      }).then(envelopeOrLegacy);
++      }).then(envelopeData);
+       setResult(data);
+       if (data.ok) localStorage.setItem('last_delivery_pincode', p);
+     } catch (e: any) {
+diff --git a/frontend/components/pages/ProsePage.tsx b/frontend/components/pages/ProsePage.tsx
+index 03167e5..4badb62 100644
+--- a/frontend/components/pages/ProsePage.tsx
++++ b/frontend/components/pages/ProsePage.tsx
+@@ -23,7 +23,7 @@
+ import { sanitizeHtml } from '@/lib/sanitizeHtml';
+ import { use, useEffect, useMemo, useState } from 'react';
+ import Link from 'next/link';
+-import { api, envelopeOrLegacy } from '@/lib/api';
++import { api, envelopeData } from '@/lib/api';
+ import { ProsePageSkeleton } from '@/components/common/PageSkeletons';
+ 
+ type Page = {
+@@ -232,7 +232,7 @@ export default function ProsePage({
+     }
+     setNotFound(false);
+     api
+-      .get(`/pages/${encodeURIComponent(slug)}`).then(envelopeOrLegacy)
++      .get(`/pages/${encodeURIComponent(slug)}`).then(envelopeData)
+       .then(({ data }) => {
+         if (!cancelled) setPage(data.page as Page);
+       })
+diff --git a/frontend/components/pages/ShoByBikePage.tsx b/frontend/components/pages/ShoByBikePage.tsx
+index ad156b6..6dfcbb2 100644
+--- a/frontend/components/pages/ShoByBikePage.tsx
++++ b/frontend/components/pages/ShoByBikePage.tsx
+@@ -23,7 +23,7 @@
+ import { useEffect, useMemo, useRef, useState } from 'react';
+ import Link from 'next/link';
+ import Image from 'next/image';
+-import { api, imageUrl, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, envelopeData } from '@/lib/api';
+ import { nameToSlug, slugToName } from '@/lib/categorySlug';
+ import { div } from 'framer-motion/client';
+ 
+@@ -88,7 +88,7 @@ export default function ShoByBikePage({
+         let cancelled = false;
+         setTreeLoaded(false);
+         api
+-            .get('/categories').then(envelopeOrLegacy)
++            .get('/categories').then(envelopeData)
+             .then(({ data }) => {
+                 if (cancelled) return;
+                 setTree(data.tree || []);
+diff --git a/frontend/components/sell/SellerGuideSection.tsx b/frontend/components/sell/SellerGuideSection.tsx
+index c6cb2d0..bb55662 100644
+--- a/frontend/components/sell/SellerGuideSection.tsx
++++ b/frontend/components/sell/SellerGuideSection.tsx
+@@ -22,7 +22,7 @@
+ import { useEffect, useState } from 'react';
+ import Link from 'next/link';
+ import Image from 'next/image';
+-import { api, imageUrl, envelopeOrLegacy } from '@/lib/api';
++import { api, imageUrl, envelopeData } from '@/lib/api';
+ 
+ type Guide = {
+   _id: string;
+@@ -50,8 +50,8 @@ export default function SellerGuideSection() {
+     (async () => {
+       try {
+         const [guidesRes, sectionRes] = await Promise.all([
+-          api.get('/seller-guides', { params: { active: 1 } }).then(envelopeOrLegacy),
+-          api.get('/seller-guide-section', { params: { active: 1 } }).then(envelopeOrLegacy),
++          api.get('/seller-guides', { params: { active: 1 } }).then(envelopeData),
++          api.get('/seller-guide-section', { params: { active: 1 } }).then(envelopeData),
+         ]);
+         if (!mounted) return;
+         setGuides(Array.isArray(guidesRes.data?.items) ? guidesRes.data.items : []);
+diff --git a/frontend/lib/api.ts b/frontend/lib/api.ts
+index 244518e..e4623e4 100644
+--- a/frontend/lib/api.ts
++++ b/frontend/lib/api.ts
+@@ -97,37 +97,26 @@ export function unwrapMeta<T, M = PageMeta>(r: { data: Envelope<T, M> }): { data
+ }
+ 
+ /**
+- * Tolerant readers for endpoints that every app shares (categories, brands,
+- * and the public catalogue as it moves to the envelope). They take `data`
+- * out of `{ data, meta? }` and pass a legacy body through unchanged, so a
+- * page keeps working whichever of frontend and backend deploys first —
+- * which matters for server-rendered storefront pages and menus. For an
+- * endpoint only this app reads, prefer `unwrap`: both sides ship together.
+- * Paging meta (`page, pageSize, totalItems, totalPages`) comes back as the
+- * legacy `page, limit, total, pages` keys beside the data.
++ * Readers for list and detail answers on endpoints every app shares (catalogue,
++ * CMS, blog), used where a page reads `data.total` / `data.pages` beside the
++ * rows. `dataOf` takes `data` out of `{ data, meta? }` and folds paging meta
++ * (`page, pageSize, totalItems, totalPages`) back in as `page, limit, total,
++ * pages`. For anything else, `unwrap` / `unwrapMeta` read the envelope as is.
+  */
+ export function dataOf<T = any>(body: any): T {
+-  if (body && typeof body === 'object' && !Array.isArray(body)) {
+-    const keys = Object.keys(body);
+-    if (keys.includes('data') && keys.every((k) => k === 'data' || k === 'meta')) {
+-      const { data, meta } = body;
+-      if (!meta || !data || typeof data !== 'object' || Array.isArray(data)) return data as T;
+-      // Paging meta folds back into the keys the legacy list bodies used,
+-      // so `data.total` / `data.pages` readers work on either shape.
+-      return {
+-        ...data,
+-        page: data.page ?? meta.page,
+-        limit: data.limit ?? meta.pageSize,
+-        total: data.total ?? meta.totalItems,
+-        pages: data.pages ?? meta.totalPages,
+-      } as T;
+-    }
+-  }
+-  return body as T;
++  const { data, meta } = body ?? {};
++  if (!meta || !data || typeof data !== 'object' || Array.isArray(data)) return data as T;
++  return {
++    ...data,
++    page: data.page ?? meta.page,
++    limit: data.limit ?? meta.pageSize,
++    total: data.total ?? meta.totalItems,
++    pages: data.pages ?? meta.totalPages,
++  } as T;
+ }
+ 
+-/** `api.get(...).then(envelopeOrLegacy)` — the response with `data` replaced by `dataOf(data)`. */
+-export function envelopeOrLegacy<R extends { data: any }>(r: R): R {
++/** `api.get(...).then(envelopeData)` — the response with `data` replaced by `dataOf(data)`. */
++export function envelopeData<R extends { data: any }>(r: R): R {
+   return { ...r, data: dataOf(r.data) };
+ }
+ 
+diff --git a/frontend/proxy.ts b/frontend/proxy.ts
+index 0fd74ca..6e05f04 100644
+--- a/frontend/proxy.ts
++++ b/frontend/proxy.ts
+@@ -56,9 +56,8 @@ async function loadRedirects(site: SiteKey): Promise<Map<string, RedirectRow>> {
+     });
+     if (!res.ok) throw new Error(`status ${res.status}`);
+     const body = await res.json();
+-    // `{ data: { items } }` from the envelope, or the older bare `{ items }`.
+-    // Inline rather than lib/api's dataOf: the proxy runtime should not pull in axios.
+-    const data = body && typeof body === 'object' && 'data' in body && !('items' in body) ? body.data : body;
++    // `{ data: { items } }`. Read inline rather than through lib/api: the proxy runtime should not pull in axios.
++    const data = body?.data;
+     const map = new Map<string, RedirectRow>();
+     for (const r of (data?.items as RedirectRow[]) || []) {
+       // Source is already normalised to start with `/` in the model,
